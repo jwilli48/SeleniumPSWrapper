@@ -352,6 +352,7 @@ function Invoke-SeWaitUntil {
     
     .DESCRIPTION
     Use this function to allow a script to wait until the browser is able to fulfill specific required conditions. There are various predefined conditions that you can use that are defined already, allowing for tab auto completion. Each of these conditions can require different parameters and once you choose a condition the specific params for that condition will become available and must be filled. Sometimes their will be different options you can choose and as soon as you choose one the others will no longer be available (such as searching either with a by condition + locator or inputting an IWebElement object).
+    Certain conditions may only return true or false while others will return one or more IWebElement objects (similar to Invoke-SeFindElements).
     
     .PARAMETER Condition
     The condition to wait for. This will define various other dynamic parameters needed once it has been set. 
