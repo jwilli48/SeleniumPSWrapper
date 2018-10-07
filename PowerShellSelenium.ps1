@@ -207,31 +207,28 @@ function Start-SeFireFox {
 function Get-SeDriverStatus {
     <#
     .SYNOPSIS
-    
+    Returns various items from one or more drivers
     .DESCRIPTION
-    Long description
+    Takes in one or more WebDrivers and returns a custom object that contains the Url, Title, SessionID, CurrentWindowHandle (browser tab with focus), any other window handles (all other tabs), and then any capabilities of the driver. All of this data can be accessed from the driver object itself though so this may have limited use
     
     .PARAMETER driver
-    Parameter description
+    The Selenium WebDriver object. This can be an array of drivers as well. 
     
     .EXAMPLE
-    An example
+    $cdriver = Start-SeChrome -Headless
+    $fdriver = Start-SeFirefox -Headless
+    Get-SeDriverStatus -Driver $cdriver,$fdriver
     
     .NOTES
     General notes
     #>
     [cmdletbinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeLine = $true)]
-        [ValidateScript( {
-                if ($_.ToString() -ne "OpenQA.Selenium.Chrome.ChromeDriver") {
-                    throw "Object must be of type OpenQA.Selenium.Chrome.ChromeDriver"
-                }
-                else { $true }
-            })]
-        $driver
+        [Parameter(Mandatory = $true, ValueFromPipeLine = $true)] 
+       [OpenQA.Selenium.Remote.RemoteWebDriver[]]$driver
     )
     process {
+        #Need to make this a foreach loop#
         [PSCustomObject] @{
             Url                 = $driver.url
             Title               = $driver.title
@@ -246,22 +243,22 @@ function Get-SeDriverStatus {
 function Invoke-SeJavaScript {
     <#
     .SYNOPSIS
-    Short description
+    Run JavaScript on browser window that has focus
     
     .DESCRIPTION
-    Long description
+    Runs one or more JavaScript scripts that are given as input on the browser. It will attempt to execute the scripts (they can be Async or not depending on if you set the switch value) and if it fails it will print an error message that includes the script that fails (if you have the verbose switch set, otherwise it should fail silently).
     
     .PARAMETER driver
-    Parameter description
+    Selenium webdriver that you will execute the JavaScript on. 
     
     .PARAMETER scripts
-    Parameter description
+    One or more scripts to be run, stored as an array of strings. 
     
     .PARAMETER Async
-    Parameter description
+    If set the scripts will be run as AsyncScripts
     
     .EXAMPLE
-    An example
+    Start-SeChrome | Invoke-Javascript -Script "while(!document.ready()); window.url = "https://gmail.com; return document.title;"
     
     .NOTES
     General notes
@@ -269,13 +266,7 @@ function Invoke-SeJavaScript {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeLine = $true)]
-        [ValidateScript( {
-                if ($_.ToString() -ne "OpenQA.Selenium.Chrome.ChromeDriver") {
-                    throw "Object must be of type OpenQA.Selenium.Chrome.ChromeDriver"
-                }
-                else { $true }
-            })]
-        $driver,
+        [OpenQA.Selenium.Remote.RemoteWebDriver]$driver,
         [Parameter(Mandatory = $true)]
         [string[]]$scripts,
         [switch]$Async
@@ -307,34 +298,34 @@ function Invoke-SeJavaScript {
 function Invoke-SeFindElements {
     <#
     .SYNOPSIS
-    Short description
+    Search the page for the given element(s)
     
     .DESCRIPTION
-    Long description
+    Allows you to search your browser for the element and returns an object representing that element that you can then manipulate. There are various search options you can choose that all require different type of locators and will attempt to run and fail if you do not have the correct format for the search you wish to use. You must input either a WebDriver object or an IWebElement. If nothing is found it will return nothing. 
     
     .PARAMETER driver
-    Parameter description
+    Webdriver to search
     
     .PARAMETER element
-    Parameter description
+    You can also run these search functions with a different element as your base instead of the webdriver.
     
     .PARAMETER by
-    Parameter description
+    Your search type, the values you can choose are predefined and you can tab autocomplete through them. 
     
     .PARAMETER locator
-    Parameter description
+    This will be a string containing how to find the element. Must match the corresponding by type in order to not throw an error. 
     
     .EXAMPLE
-    An example
+    Invoke-SeFindElement -Driver $driver -by CssSelector -Locator 'input[type="password"]'
     
     .NOTES
-    General notes
+    This should only be used if you know the page has alreadyoaded completely as it will immediately search for the given element. See Invoke-SeWaitUntil to allow for the browser to wait for certain conditions to be filled. 
     #>
     [CmdletBinding()]
     [OutputType([OpenQA.Selenium.IWebElement])]
     param(
         [Parameter(Mandatory = $true, ParameterSetName = "Driver")]
-        $driver,
+        [OpenQA.Selenium.Remote.RemoteWebDriver]$driver,
         [Parameter(Mandatory = $true, ParameterSetName = "Element")]
         [OpenQA.Selenium.IWebElement]$element,
         [Parameter(Mandatory = $true)]
@@ -357,28 +348,31 @@ function Invoke-SeFindElements {
 function Invoke-SeWaitUntil {
     <#
     .SYNOPSIS
-    Short description
+    Cause the driver to wait for specific conditions to be filled. 
     
     .DESCRIPTION
-    Long description
+    Use this function to allow a script to wait until the browser is able to fulfill specific required conditions. There are various predefined conditions that you can use that are defined already, allowing for tab auto completion. Each of these conditions can require different parameters and once you choose a condition the specific params for that condition will become available and must be filled. Sometimes their will be different options you can choose and as soon as you choose one the others will no longer be available (such as searching either with a by condition + locator or inputting an IWebElement object).
     
     .PARAMETER Condition
-    Parameter description
+    The condition to wait for. This will define various other dynamic parameters needed once it has been set. 
     
     .PARAMETER WaitTime
-    Parameter description
+    The time to wait for the condition to be filled before throwing a TimeOut error. Default is 5 seconds
     
     .PARAMETER PollingInterval
-    Parameter description
+    Interval at which the condition will be polled to see if it has been fulfilled. Default is 500ms
     
     .PARAMETER TimeOutMessage
-    Parameter description
-    
+    An additional message that can be added to the TimeOut error. 
+
+    .PARAMETER Driver
+    Selenium WebDriver Object
+
     .EXAMPLE
-    An example
+    Invoke-SeWaitUntil -Driver $driver -Condition AlertState -State $true
     
     .NOTES
-    General notes
+    There are a lot of dynamic parameters for this function that depends on the condition wanted. I had an issue where the dynamic params were not visually showing up once the driver param was set, it is a bug with PowerShell tab autocomplete and custom objects. To fix that I moved the driver param to be a dynamic param.
     #>
     [cmdletbinding(DefaultParameterSetName = "By")]
     [OutputType([boolean], [OpenQA.Selenium.IWebElement[]])]
