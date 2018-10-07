@@ -5,13 +5,10 @@ Functions to ease use of Selenium Webdriver to be used inside of Windows PowerSh
 
 .NOTE
     Dynamic Params: If you have a custom type as a param, the dynamic params will not show up visually with tab completion / Intellisense after that one has been set in the function.
-    FIX: Make the custum object a dynamic parm that is always created
+    FIX: Make the custom object a dynamic parm that is always created
 #>
 
 #Load needed modules
-#[System.Reflection.Assembly]::LoadFrom("E:\SeleniumTest\WebDriver.dll") | Out-Null
-#[System.Reflection.Assembly]::LoadFrom("E:\SeleniumTest\WebDriver.Support.dll") | Out-Null
-#[System.Reflection.Assembly]::LoadFrom("E:\SeleniumTest\Selenium.WebDriverBackedSelenium.dll") | Out-Null
 [System.Reflection.Assembly]::LoadFrom("$home\Desktop\SeleniumTest\WebDriver.dll") | Out-Null
 [System.Reflection.Assembly]::LoadFrom("$home\Desktop\SeleniumTest\WebDriver.Support.dll") | Out-Null
 [System.Reflection.Assembly]::LoadFrom("$home\Desktop\SeleniumTest\Selenium.WebDriverBackedSelenium.dll") | Out-Null
