@@ -81,7 +81,7 @@ function Start-SeFireFox {
         [switch]$MuteAudio,
         [switch]$Maximized,
         [switch]$Private,
-        [string[]]$CustomOptions,
+        [string[]]$CustomOptions
     )
     process {
         [OpenQA.Selenium.Firefox.FirefoxOptions]$firefox_options = New-Object OpenQA.Selenium.Firefox.FirefoxOptions
