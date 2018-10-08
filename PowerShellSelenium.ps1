@@ -18,6 +18,8 @@ function Start-SeChrome {
     <#
     .SYNOPSIS
     Returns a Selenium Chromedriver object
+    .PARAMETER CustomOptions
+    Any additional parameters you would like, I included the switches for common ones.
     .EXAMPLE
     $driver = Start-SeChrome -Maximized
     .EXAMPLE
@@ -29,7 +31,8 @@ function Start-SeChrome {
         [switch]$Headless,
         [switch]$MuteAudio,
         [switch]$Maximized,
-        [switch]$Incognito
+        [switch]$Incognito,
+        [string[]]$CustomOptions
     )
     process {
         [OpenQA.Selenium.Chrome.ChromeOptions]$chrome_options = New-Object OpenQA.Selenium.Chrome.ChromeOptions
@@ -43,8 +46,13 @@ function Start-SeChrome {
         if ($Maximized) {
             $chrome_options.AddArgument("--start-maximized")
         }
-        if($incognito){
+        if ($incognito) {
             $chrome_options.AddArgument("--incognito")
+        }
+        if ($NULL -ne $CustomOptions){
+            foreach($option in $CustomOptions){
+                $chrome_options.AddArgument($option)
+            }
         }
         if ($chrome_options.Arguments -eq 0) {
             New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver
@@ -59,6 +67,8 @@ function Start-SeFireFox {
     <#
     .SYNOPSIS
     Returns a Selenium FirefoxDriver object
+    .PARAMETER CustomOptions
+    Any additional parameters you would like, I included the switches for common ones.
     .EXAMPLE
     $driver = Start-SeFirefox -Maximized
     .EXAMPLE
@@ -70,7 +80,8 @@ function Start-SeFireFox {
         [switch]$Headless,
         [switch]$MuteAudio,
         [switch]$Maximized,
-        [switch]$Private
+        [switch]$Private,
+        [string[]]$CustomOptions,
     )
     process {
         [OpenQA.Selenium.Firefox.FirefoxOptions]$firefox_options = New-Object OpenQA.Selenium.Firefox.FirefoxOptions
@@ -84,6 +95,11 @@ function Start-SeFireFox {
             }
             else {
                 $firefox_options.AddArgument("-P")
+            }
+        }
+         if ($NULL -ne $CustomOptions){
+            foreach($option in $CustomOptions){
+                $firefox_options.AddArgument($option)
             }
         }
         if ($firefox_options.Arguments -eq 0) {
@@ -214,7 +230,7 @@ function Invoke-SeFindElements {
     This will be a string containing how to find the element. Must match the corresponding by type in order to not throw an error. 
     
     .EXAMPLE
-    Invoke-SeFindElement -Driver $driver -by CssSelector -Locator 'input[type="password"]'
+    $PasswordElement = Invoke-SeFindElement -Driver $driver -by CssSelector -Locator input[type="password"]
     
     .NOTES
     This should only be used if you know the page has alreadyoaded completely as it will immediately search for the given element. See Invoke-SeWaitUntil to allow for the browser to wait for certain conditions to be filled. 
@@ -239,7 +255,7 @@ function Invoke-SeFindElements {
         else {
             $itemList = $ElementList
         }
-        foreach($item in $itemList){
+        foreach ($item in $itemList) {
             $item.FindElements([OpenQA.Selenium.By]::$by($locator))
         }
     }
@@ -415,7 +431,7 @@ function Invoke-SeWaitUntil {
         #Get-Variable -scope 0
     }
     process {
-        foreach($driver in $DriverList){
+        foreach ($driver in $DriverList) {
             $wait = New-Object -TypeName OpenQA.Selenium.Support.UI.WebDriverWait($driver, $waitTime)
             $wait.PollingInterval = $PollingInterval
             $wait.Message = $TimeOutMessage
@@ -574,7 +590,7 @@ function Close-SeDriver {
     Close-SeDriver -DriverList $a, $b, $c
     
     .NOTES
-    General notes
+    Using $driver.Clos() will only close the tab
     #>
     [CmdletBinding()]
     param(
@@ -670,7 +686,7 @@ function Send-SeKeys {
     }
 }
 
-function Set-SeTabFocus{
+function Set-SeTabFocus {
     <#
     .SYNOPSIS
     Switches driver tab to new tab
@@ -679,35 +695,126 @@ function Set-SeTabFocus{
     Changes tab to the given input, will throw an error if the tab does not exist
     
     .PARAMETER DriverList
-    Parameter description
+    Array of drivers to switch tabs
     
     .PARAMETER TabNumber
-    Parameter description
+    Tab to switch to
     
+    .PARAMETER UrlOrTitle
+    A regex that will match with a URL or Title of a tab. Will stop at the first tab that matches the expression or go all the way to the last tab and stop their.
+
     .EXAMPLE
-    An example
+    Set-SeTabFoucs -DriverList $a, $b -TabNumber 2 | Invoke-SeJavaScript -Script "return document.title;"
     
     .NOTES
-    General notes
+   This does return the Driver object so you can pass the output of this function into another one that accepts an array of WebDrivers. Using the Regex to match will be much slower then switching to a numbered tab.
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName="Number")]
-        $TabNumber
+        [Parameter(Mandatory = $true, ParameterSetName = "Number")]
+        $TabNumber,
+        [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
+        [regex]$UrlOrTitle
     )
-    process{
-        Foreach($driver in $DriverList){
-            if($TabNumber -gt $driver.WindowHandles.Count){
-                throw "Tab number can't be greater then the number of tabs"
+    process {
+        Foreach ($driver in $DriverList) {
+            if ($PSCmdlet.ParameterSetName -eq "Number") {
+                if ($TabNumber -gt $driver.WindowHandles.Count) {
+                    throw "Tab number can't be greater then the number of tabs"
+                }
+                $driver.SwitchTo().Window($driver.WindowHandles[$TabNumber])
             }
-            $driver.SwitchTo().Window($driver.WindowHandles[$TabNumber])
+            else {
+                $WindowHandles = $driver.WindowHandles
+                For ($i = 0; $i -lt $WindowHandles.Count; $i++) {
+                    $NewTab = $driver.SwitchTo().Window($WindowHandles[$i])
+                    if ($NewTab.Url -match $UrlOrTitle -or $NewTab.Title -match $UrlOrTitle) {
+                        $driver.SwitchTo().Window($WindowHandles[$i])
+                        break
+                    }
+                }
+            }
         }
     }
 }
 
-function Get-SeScreenShot{
+function Close-SeTab {
+    <#
+    .SYNOPSIS
+    Closes tab based on given parameter
+    
+    .DESCRIPTION
+    Will close the tab that you specify through the CurrentWindow switch, TabNumber or Regex match with the URL or Title. As a warning if the current window is closed the driver will be left focusing nothing and will need to have the window focus set to a window that exists.
+    
+    .PARAMETER DriverList
+    Array of WebDriver objects
+    
+    .PARAMETER TabNumber
+    Tab number to be closed (From left to right, 0-N)
+    
+    .PARAMETER UrlOrTitle
+    Regex to match the URL or title, will close first one it runs into.
+    
+    .PARAMETER CurrentTab
+    Closes the tab currently focused
+    
+    .EXAMPLE
+    #Close the 2nd tab and set focus to the first for all drivers in list.
+    Close-SeTab -DriverList $a, $b, $c -TabNumber 1 | Set-SeTab -TabNumber 0
+    
+    .NOTES
+    The regex will be slow as it switches to every tab until it finds a match.
+    #>
+    [CmdletBinding(DefaultParameterSetName = "Number")]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
+        [Parameter(Mandatory = $true, ParameterSetName = "Number")]
+        $TabNumber,
+        [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
+        [regex]$UrlOrTitle,
+        [Parameter(Mandatory = $true, ParameterSetName = "Current")]
+        [switch]$CurrentTab
+    )
+    process {
+        ForEach ($driver in $DriverList) {
+            if ($CurrentTab) {
+                $driver.Close()
+                Write-Verbose "Current window was closed, driver is now not focused on any tab and must be set again."
+            }
+            elseif ($PSCmdlet.ParameterSetName -eq "Number") {
+                $CurrentWindow = $Driver.CurrentWindowHandle
+                ($Driver.SwitchTo().Window($Driver.WindowHandles[$TabNumber])).Close()
+                try {
+                    $Driver.SwitchTo().Window($CurrentWindow)
+                }
+                catch {
+                    Write-Verbose "Current window was closed, driver is now not focused on any tab and must be set again."
+                }
+            }
+            elseif ($PSCmdlet.ParameterSetName -eq "Regex") {
+                $CurrentWindow = $Driver.CurrentWindowHandle
+                $WindowHandles = $driver.WindowHandles
+                For ($i = 0; $i -lt $WindowHandles.Count; $i++) {
+                    $NewTab = $driver.SwitchTo().Window($WindowHandles[$i])
+                    if ($NewTab.Url -match $UrlOrTitle -or $NewTab.Title -match $UrlOrTitle) {
+                        $NewTab.Close()
+                        break
+                    }
+                }
+                try {
+                    $Driver.SwitchTo().Window($CurrentWindow)
+                }
+                catch {
+                    Write-Verbose "Current window was close, driver is now not focused on any tab and must be set again."
+                }
+            }
+        }
+    }
+}
+function Get-SeScreenShot {
     <#
     .SYNOPSIS
     Screen shot the borwser page.
@@ -734,30 +841,31 @@ function Get-SeScreenShot{
     .NOTES
     General notes
     #>
-    [CmdletBinding(DefaultParameterSetName="DontSave")]
+    [CmdletBinding(DefaultParameterSetName = "DontSave")]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName="SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
         [ValidateSet("Png", "Jpeg", "Gif", "Tiff", "Bmp")]
         $Format,
-        [Parameter(Mandatory = $true, ParameterSetName="SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
         $DestinationDirectory,
-        [Parameter(Mandatory=$true, ParameterSetName="SaveAs")]
-        [ValidateScript({
-            if($_ -match ".*?\.[A-Za-z]+"){
-                throw "Do not include a file extension as it will be added from the Format parameter"
-            }else{
-                $true
-            }})]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [ValidateScript( {
+                if ($_ -match ".*?\.[A-Za-z]+") {
+                    throw "Do not include a file extension as it will be added from the Format parameter"
+                }
+                else {
+                    $true
+                }})]
         $FileBaseName
     )
-    process{
+    process {
         $image_number = 0
-        foreach($Driver in $DriverList){
+        foreach ($Driver in $DriverList) {
             $ScreenShot = $driver.GetScreenShot()
-            if($PSCmdlet.ParameterSetName -eq "SaveAs"){
-                if(-not (Test-Path $DestinationDirectory)){
+            if ($PSCmdlet.ParameterSetName -eq "SaveAs") {
+                if (-not (Test-Path $DestinationDirectory)) {
                     New-Item -ItemType Directory -Path $DestinationDirectory    
                 }
                 $ScreenShot.SaveAsFile("$DestinationDirectory\$($FileBaseName)_$image_number.$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
@@ -770,7 +878,7 @@ function Get-SeScreenShot{
 
 
 
-function Get-SeElementScreenShot{
+function Get-SeElementScreenShot {
     <#
     .SYNOPSIS
     Tries to screen shot specific elements
@@ -798,52 +906,55 @@ function Get-SeElementScreenShot{
     
     .NOTES
     Not working currently very well (crops image incorrectly). 
+    Currently the MemoryStream limits the number of screenshots you can crop at a time. The way below would be to save the screenshots to a temp directory and get the data from the files one at a time then delete the temp. Besides the number of images you can crop though there is not difference that I can really tell, both don't crop it right.
+
     When I have time this is probably a better way to do it:
     $Screenshot = $driver.GetScreenShot()
     $ScreenShot.Saveas("$home\temp\$tempname.format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
 
     [System.Drawing.Image]$img = [System.Drawing.Image]::FromFile($tempfile)
 
-    $rect = New-Object System.Drawing.Rectangle($element.location.X, $element.location.Y, $element.size.Width, $element.size.Height) #Maybe my issue is this isn't in the correct order.
+    $rect = New-Object System.Drawing.Rectangle($element.location.X, $element.location.Y, $element.size.Width, $element.size.Height)
 
     [System.Drawing.Bitmap]$BmpImage = New-Object System.Drawing.Bitmap($img)
     $crop = $BmpImage.Clone($Rect, $BmpImage.PixelFormat)
     $crop.Save("$home\$temp\$tempname.$format", [System.Drawing.Imaging.ImageFormat]::$format)
     #>
-    [CmdletBinding(DefaultParameterSetName="DontSave")]
+    [CmdletBinding(DefaultParameterSetName = "DontSave")]
     [OutputType([System.Drawing.Bitmap])]
     param(
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
         [Parameter(Mandatory = $true)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
-        [Parameter(Mandatory = $true, ParameterSetName="SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
         [ValidateSet("Png", "Jpeg", "Gif", "Tiff", "Bmp")]
         $Format,
-        [Parameter(Mandatory = $true, ParameterSetName="SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
         [string]$DestinationDirectory,
-        [Parameter(Mandatory=$true, ParameterSetName="SaveAs")]
-        [ValidateScript({
-            if($_ -match ".*?\.[A-Za-z]+"){
-                throw "Do not include a file extension as it will be added from the Format parameter"
-            }else{
-                $true
-            }})]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [ValidateScript( {
+                if ($_ -match ".*?\.[A-Za-z]+") {
+                    throw "Do not include a file extension as it will be added from the Format parameter"
+                }
+                else {
+                    $true
+                }})]
         [string]$FileBaseName
     )
-    process{
+    process {
         $ElementList = $ElementList | Select-Object -Unique
         $ScreenShots = Get-SeScreenShot -DriverList $DriverList
         $image_num = 0 
-        foreach($ScreenShot in $ScreenShots){
-            foreach($Element in $ElementList){
+        foreach ($ScreenShot in $ScreenShots) {
+            foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.AsByteArray.Count)))
 
                 [System.Drawing.Rectangle] $crop = New-Object System.Drawing.Rectangle($element.location.X, $element.location.Y, $element.size.width, $element.size.height)
 
                 $image = $image.clone($crop, $image.PixelFormat)
-                if($PSCmdlet.ParameterSetName -eq "SaveAs"){
-                    if(-not (Test-Path $DestinationDirectory)){
+                if ($PSCmdlet.ParameterSetName -eq "SaveAs") {
+                    if (-not (Test-Path $DestinationDirectory)) {
                         New-Item -ItemType Directory -Path $DestinationDirectory    
                     }
                     $image.Save("$($DestinationDirectory)\$($FileBaseName)_$($image_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)                    
@@ -852,5 +963,85 @@ function Get-SeElementScreenShot{
                 $image
             }
         }
+    }
+}
+
+function Invoke-SeNavigate{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
+        [Parameter(Mandatory = $true, ParameterSetName="Navigate")]
+        [ValidateSet("Back", "Forward", "Refresh")]
+        $Navigate,
+        [Parameter(Mandatory = $true, ParameterSetName = "Url")]
+        [String]$Url
+    )
+    process{
+        Foreach($Driver in $DriverList){
+            if($PSCmdlet.ParameterSetName -eq "Url"){
+                $Driver.Navigate().GoToUrl($Url)
+            }else{
+                $Driver.Navigate().$Navigate()
+            }
+        }
+    }
+}
+
+function Invoke-SeSwitchTo{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [ValidateSet("ActiveElement", "Alert", "DefaultContent", "Frame", "ParentFrame", "Window")]
+        $SwitchTo
+    )
+    DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline ))
+        switch ($SwitchTo){
+            "Frame"{
+                $RuntimeParameterDictionary.Add('FrameIndex', (Get-DynamicParam -name 'FrameIndex' -type int -mandatory -SetName "Index"))
+                $RuntimeParameterDictionary.Add('FrameName',(Get-DynamicParam -name 'Name' -type string -mandatory -SetName "Name"))
+                $RuntimeParameterDictionary.Add('FrameElement', (Get-DynamicParam -name "FrameElement" -type OpenQA.Selenium.IWebElement -mandatory -SetName "Element"))
+            }"Window"{
+                $RuntimeParameterDictionary.Add("windowHandleOrName", (Get-DynamicParam -name "windowHandleOrName" -type string -mandatory))
+            }
+        }
+    }
+}
+
+function Invoke-SeChromeCommand{
+    <#
+    .SYNOPSIS
+    Executes custom Chrome command
+    
+    .PARAMETER DriverList
+    Must be a chrome WebDriver
+    
+    .PARAMETER commandName
+    Name of command to execute
+    
+    .PARAMETER commandParameters
+    Parameters of command to execute
+    
+    .EXAMPLE
+    I am honestly not sure really how to use this, it is a part of the ChromeDriver object though and so I included this command for it.
+    
+    .NOTES
+    I am honestly not sure really how to use this, it is a part of the ChromeDriver object though and so I included this command for it.
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [OpenQA.Selenium.Chrome.ChromeDriver[]]$DriverList,
+        [Parameter(Mandatory = $true)]
+        [string]$commandName,
+        [Parameter(Mandatory = $true)]
+        [System.Collections.Generic.Dictionary[string,System.Object]]$commandParameters
+    )
+    Process{
+        $Driver.ExecuteChromeCommand($commandName, $commandParameters)
     }
 }
