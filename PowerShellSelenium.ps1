@@ -1037,21 +1037,160 @@ function Invoke-SeSwitchTo{
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [ValidateSet("ActiveElement", "Alert", "DefaultContent", "Frame", "ParentFrame", "Window")]
-        $SwitchTo
+        [string]$SwitchTo
     )
     DynamicParam{
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
-        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline ))
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
         switch ($SwitchTo){
             "Frame"{
                 $RuntimeParameterDictionary.Add('FrameIndex', (Get-DynamicParam -name 'FrameIndex' -type int -mandatory -SetName "Index"))
-                $RuntimeParameterDictionary.Add('FrameName',(Get-DynamicParam -name 'Name' -type string -mandatory -SetName "Name"))
+                $RuntimeParameterDictionary.Add('FrameName', (Get-DynamicParam -name 'FrameName' -type string -mandatory -SetName "Name"))
                 $RuntimeParameterDictionary.Add('FrameElement', (Get-DynamicParam -name "FrameElement" -type OpenQA.Selenium.IWebElement -mandatory -SetName "Element"))
             }"Window"{
                 $RuntimeParameterDictionary.Add("windowHandleOrName", (Get-DynamicParam -name "windowHandleOrName" -type string -mandatory))
             }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin{
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process{
+        foreach($driver in $driverList){
+            switch ($SwitchTo)
+            {
+                "Frame"{
+                    switch ($FrameIndex, $FrameName, $FrameElement){
+                        $NULL{}
+                        default{
+                            $Locator = $_
+                            break
+                        }
+                    }
+                    $driver.SwitchTo().Frame($Locator)
+                    break
+                }"Window"{
+                    $driver.SwitchTo().Window($windowHandleOrName)
+                    break
+                }default{
+                    $driver.SwitchTo().$SwitchTo()
+                }
+            }
+        }
+    }
+}
+
+function Invoke-SeMouse(){
+    <#
+    .SYNOPSIS
+    Invoke commands normally done with a mouse
+
+    .DESCRIPTION
+    Used to click / submit elements as well as to do various functions with the divers mouse class.
+    
+    .PARAMETER DriverList
+    Parameter description
+    
+    .PARAMETER ElementList
+    Parameter description
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
+    [CmdletBinding()]
+    param()
+    DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline -SetName "Driver"))
+        $RuntimeParameterDictionary.Add('ElementList', (Get-DynamicParam -Name "ElementList" -type "OpenQA.Selenium.IWebElement[]" -mandatory -FromPipeline -SetName "Element"))
+
+        switch ($RuntimeParameterDictionary.Keys)
+        {
+            "DriverList"{
+                $RuntimeParameterDictionary.Add('MouseEvent', (Get-DynamicParam -Name "MouseEvent" -type string -mandatory -ValidateSet "Click","ContextClick", "DoubleClick", "MouseDown", "MouseMove", "MouseUp"))
+                $RuntimeParameterDictionary.Add("Coordinates", (Get-DynamicParam -Name "Coordinates" -type OpenQA.Selenium.Interactions.Internal.ICoordinates -mandatory -HelpMessage "I believe this can be the `$element.Location"))
+            }"MouseEvent"{}
+        }
+        Write-Host $RuntimeParameterDictionary.Values
+        switch (($RuntimeParameterDictionary.Values | Where-Object {$_.Name -eq "MouseEvent"}))
+        {
+            "MouseMove"{
+                $RuntimeParameterDictionary.Add("offsetX", (Get-DynamicParam -name "offsetX" -type int))
+                $RuntimeParameterDictionary.Add("offsetY", (Get-DynamicParam -name "offsetY" -type int))
+            }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin{
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+
+        #Validate both offset's are either set or not set
+        switch -regex ($offsetX)
+        {
+            "."{
+                switch -regex ($offsetY)
+                {
+                    "."{
+                        $true
+                    }$NULL{
+                        throw "offsetX and Y must both be set or both be empty"
+                    }
+                }
+            }$NULL{
+                switch -regex ($offsetX)
+                {
+                    $NULL{
+                        $true
+                    }"."{
+                        throw "offsetX and Y must both be set or both be empty"
+                    }
+                }
+            }
+        }
+    }
+    process{
+        if($PSCmdlet.ParameterSetName -eq "Driver"){
+            if($NULL -ne $offsetX){
+                $DriverList.Mouse.$MouseEvent($Coordinates, $offsetX, $offsetY)
+            }else{
+                $DriverList.Mouse.$MouseEvent($Coordinates)
+            }
+        }else{
+            $ElementList.Click()
         }
     }
 }

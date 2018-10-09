@@ -63,6 +63,8 @@ function Get-DynamicParam {
     }
     .NOTES
     The function _temp in the first example can be extremely helpful when wanting to use the DynamicParams within your function blocks as it creates variables for each of them with their given names. Without that function you would have to do use $PSBoundParameters[$ParameterName] in place of that. You can set $ParmName = $PSBoundParameters[$ParameterName] as well.
+
+    The name for this must match the same name as you are using for the first parameter of the RuntimeParameterDictionary.
     #>
     [CmdletBinding()]
     [OutputType([System.Management.Automation.RuntimeDefinedParameter])]
