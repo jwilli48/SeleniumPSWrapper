@@ -177,7 +177,7 @@ function Invoke-SeJavaScript {
     .EXAMPLE
     #Create new tab
     Invoke-JavaScript -DriverList $d -Script "window.open()"
-    
+
     .NOTES
     General notes
     #>
@@ -244,9 +244,9 @@ function Invoke-SeFindElements {
     [CmdletBinding()]
     [OutputType([OpenQA.Selenium.IWebElement])]
     param(
-        [Parameter(Mandatory = $true, ParameterSetName = "Driver")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Driver", ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Element")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Element", ValueFromPipeline = $true)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
         [Parameter(Mandatory = $true)]
         [ValidateSet("TagName", "ClassName", "ID", "LinkText", "PartialLinkText", "CssSelector", "XPath", "Name")]
@@ -300,7 +300,7 @@ function Invoke-SeWaitUntil {
         -VisibilityOfAllElementsLocatedBy : ([string]BY [string]LOCATOR) -OR ([System.Collections.ObjectModel.ReadOnlyCollection[OpenQA.Selenium.IWebElement]]ELEMENT_LIST)
 
     .PARAMETER WaitTime
-    The time to wait for the condition to be filled before throwing a TimeOut error. Default is 5 seconds
+    The time to wait for the condition to be filled before throwing a TimeOut error. Default is 5 seconds.
     
     .PARAMETER PollingInterval
     Interval at which the condition will be polled to see if it has been fulfilled. Default is 500ms
@@ -1203,7 +1203,7 @@ function Invoke-SeMouseClick(){
         [ValidateSet("Click", "ContextClick", "DoubleClick", "MouseDown", "MouseMove", "MouseUp")]
         [string]$MouseEvent,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Element")]
-         [OpenQA.Selenium.IWebElement[]]$ElementList
+        [OpenQA.Selenium.IWebElement[]]$ElementList
     )
     DynamicParam{
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
