@@ -21,10 +21,13 @@ function Start-SeChrome {
     Returns a Selenium Chromedriver object
     .PARAMETER CustomOptions
     Any additional parameters you would like, I included the switches for common ones.
-    .PARAMETER ProfilePath
+    
+    If you wish to use a profile you can use a custom option of "--user-data-dir=$ProfilePath"
     Please note that if you try to open a browser with a profile that is already open then it will freeze Selenium. You must close all other instances of chrome first.
     Also you must leave the "\default" off of the path as ChromeDriver adds it itself. 
     Example : "$env:LOCALAPPDATA\Google\Chrome\User Data" would stat chrome with your default profile.
+    WARNING: I found using a profile to be buggy and cause random unintended issues.
+
     .EXAMPLE
     $driver = Start-SeChrome -Maximized
     .EXAMPLE
@@ -37,8 +40,7 @@ function Start-SeChrome {
         [switch]$MuteAudio,
         [switch]$Maximized,
         [switch]$Incognito,
-        [string[]]$CustomOptions,
-        [string]$ProfilePath
+        [string[]]$CustomOptions
     )
     process {
         [OpenQA.Selenium.Chrome.ChromeOptions]$chrome_options = New-Object OpenQA.Selenium.Chrome.ChromeOptions
@@ -60,10 +62,6 @@ function Start-SeChrome {
                 $chrome_options.AddArgument($option)
             }
         }
-        if ($NULL -ne $ProfilePath){
-            $chrome_options.AddArgument("--user-data-dir=$ProfilePath")
-            $chrome_options.AddArgument("no-sandbox")
-        }
         if ($chrome_options.Arguments -eq 0) {
             New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver
         }
@@ -79,6 +77,8 @@ function Start-SeFireFox {
     Returns a Selenium FirefoxDriver object
     .PARAMETER CustomOptions
     Any additional parameters you would like, I included the switches for common ones.
+
+    You can start FireFox with a profile / the profile manager by using "-P" with a custom path, or a specific profile with '-P "ProfileName"'. As a warning I have found using a profile can give uninteded errors and issues.
     .EXAMPLE
     $driver = Start-SeFirefox -Maximized
     .EXAMPLE
@@ -118,7 +118,7 @@ function Get-SeDriverStatus {
     .SYNOPSIS
     Returns various items from one or more drivers
     .DESCRIPTION
-    Takes in one or more WebDrivers and returns a custom object that contains the Url, Title, SessionID, CurrentWindowHandle (browser tab with focus), any other window handles (all other tabs), and then any capabilities of the driver. All of this data can be accessed from the driver object itself though so this may have limited use
+    Takes in one or more WebDrivers and returns a custom object that contains the Url, Title, SessionID, CurrentWindowHandle (browser tab with focus), any other window handles (all other tabs), and then any capabilities of the driver. All of this data can be accessed from the driver object itself though so this may have limited usefullness
     
     .PARAMETER driver
     The Selenium WebDriver object. This can be an array of drivers as well. 
@@ -173,6 +173,10 @@ function Invoke-SeJavaScript {
     
     .EXAMPLE
     Start-SeChrome | Invoke-Javascript -Script "while(!document.ready()); window.url = "https://gmail.com; return document.title;"
+    
+    .EXAMPLE
+    #Create new tab
+    Invoke-JavaScript -DriverList $d -Script "window.open()"
     
     .NOTES
     General notes
@@ -577,7 +581,7 @@ function Set-SeUrl {
     }
 }
 
-function Quit-SeDriver {
+function Exit-SeDriver {
     <#
     .SYNOPSIS
     Closes the driver completely
@@ -716,7 +720,7 @@ function Set-SeTabFocus {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
         [Parameter(Mandatory = $true, ParameterSetName = "Number")]
-        $TabNumber,
+        [int]$TabNumber,
         [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
         [regex]$UrlOrTitle
     )
@@ -774,7 +778,7 @@ function Close-SeTab {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
         [Parameter(Mandatory = $true, ParameterSetName = "Number")]
-        $TabNumber,
+        [int]$TabNumber,
         [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
         [regex]$UrlOrTitle,
         [Parameter(Mandatory = $true, ParameterSetName = "Current")]
@@ -1096,13 +1100,88 @@ function Invoke-SeSwitchTo{
     }
 }
 
-function Invoke-SeMouse(){
+function Invoke-SeKeyboard{
+    <#
+    .SYNOPSIS
+    Takes a key event you would like to do
+    
+    .DESCRIPTION
+    The main purpose of this command is to Press/Release keys as it is only for a WebDriver object. You should use the Send-SeSendKeys for most cases in my opinion.
+    
+    .PARAMETER KeyEvent
+    The key event to trigger
+    
+    .EXAMPLE
+    Turns out this isn't even working, so just avoid this command.
+
+    Invoke-SeKeyboard -KeyEvent PressKey -DriverList $d, $c -keyToPress Control
+    Invoke-SeKeyboard -KeyEvent SendKeys -DriverList $d, $c -keySequence "T"
+    Invoke-SeKeyboard -Keyevent ReleaseKey -DriverList $d, $c -keyToRelease Control
+    
+    .NOTES
+    Most of the use cases for this could be done with the Send-SeKeys class.
+    Turns out this isn't even working, so just avoid this command.
+
+    If you want to open a new tab is Invoke-SeJavascript with a script of "window.open()"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("PressKey", "ReleaseKey", "SendKeys")]
+        [string]$KeyEvent
+    )
+    DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline -SetName "Driver"))
+
+        switch ($KeyEvent)
+        {
+            "PressKey"{
+                $RuntimeParameterDictionary.Add("keyToPress", (Get-DynamicParam -name "keyToPress" -Type string -mandatory -ValidateSet ("Add", "Alt", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "Backspace", "Cancel", "Clear", "Command", "Control", "Decimal", "Delete", "Divide", "Down", "End", "Enter", "Equal", "Escape", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Help", "Home", "Insert", "Left", "LeftAlt", "LeftControl", "LeftShift", "Meta", "Multiply", "Null", "NumberPAd0", "NumberPad1", "NumberPad2", "NumberPad3", "NumberPad4", "NumberPad5", "NumberPad6", "NumberPad7", "NumberPad8", "NumberPad9", "PageDown", "PageUp", "Pause", "Return", "Right", "Semicolon", "Separator", "Shift", "Space", "Subtract", "Tab", "Up")))
+            }"ReleaseKey"{
+                $RuntimeParameterDictionary.Add("keyToRelease", (Get-DynamicParam -name "keyToRelease" -Type string -mandatory -ValidateSet ("Add", "Alt", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "Backspace", "Cancel", "Clear", "Command", "Control", "Decimal", "Delete", "Divide", "Down", "End", "Enter", "Equal", "Escape", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Help", "Home", "Insert", "Left", "LeftAlt", "LeftControl", "LeftShift", "Meta", "Multiply", "Null", "NumberPAd0", "NumberPad1", "NumberPad2", "NumberPad3", "NumberPad4", "NumberPad5", "NumberPad6", "NumberPad7", "NumberPad8", "NumberPad9", "PageDown", "PageUp", "Pause", "Return", "Right", "Semicolon", "Separator", "Shift", "Space", "Subtract", "Tab", "Up")))
+            }"SendKeys"{
+                $RuntimeParameterDictionary.Add("keySequence", (Get-DynamicParam -name "keySequence" -type string -mandatory ))
+            }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin{
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+    }
+    process{
+        foreach($driver in $DriverList){
+            switch ($KeyEvent)
+            {
+                "PressKey"{
+                    $driver.Keyboard.PressKey([OpenQA.Selenium.Keys]::$keyToPress)
+                }"ReleaseKey"{
+                    $driver.Keyboard.ReleaseKey([OpenQA.Selenium.Keys]::$keyToRelease)
+                }"SendKeys"{
+                    $driver.Keyboard.SendKeys($keySequence)
+                }
+            }
+        }
+    }
+}
+function Invoke-SeMouseClick(){
     <#
     .SYNOPSIS
     Invoke commands normally done with a mouse
 
     .DESCRIPTION
-    Used to click / submit elements as well as to do various functions with the divers mouse class.
+    Used to click / submit elements as well as to do various functions with the divers mouse class. I don't know how to use the ICoordinates class that is needed for manipulating the driver mouse, but this function's main use is to click elements.
     
     .PARAMETER DriverList
     Parameter description
@@ -1117,26 +1196,21 @@ function Invoke-SeMouse(){
     General notes
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Driver")]
+        [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
+        [Parameter(Mandatory = $true, ParameterSetName = "Driver")]
+        [ValidateSet("Click", "ContextClick", "DoubleClick", "MouseDown", "MouseMove", "MouseUp")]
+        [string]$MouseEvent,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Element")]
+         [OpenQA.Selenium.IWebElement[]]$ElementList
+    )
     DynamicParam{
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
-        #In order not to mess up other dynamic params all custom objects also need to be dynamic
-        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline -SetName "Driver"))
-        $RuntimeParameterDictionary.Add('ElementList', (Get-DynamicParam -Name "ElementList" -type "OpenQA.Selenium.IWebElement[]" -mandatory -FromPipeline -SetName "Element"))
-
-        switch ($RuntimeParameterDictionary.Keys)
-        {
-            "DriverList"{
-                $RuntimeParameterDictionary.Add('MouseEvent', (Get-DynamicParam -Name "MouseEvent" -type string -mandatory -ValidateSet "Click","ContextClick", "DoubleClick", "MouseDown", "MouseMove", "MouseUp"))
-                $RuntimeParameterDictionary.Add("Coordinates", (Get-DynamicParam -Name "Coordinates" -type OpenQA.Selenium.Interactions.Internal.ICoordinates -mandatory -HelpMessage "I believe this can be the `$element.Location"))
-            }"MouseEvent"{}
-        }
-        Write-Host $RuntimeParameterDictionary.Values
-        switch (($RuntimeParameterDictionary.Values | Where-Object {$_.Name -eq "MouseEvent"}))
-        {
+        
+        switch ($MouseEvent){
             "MouseMove"{
-                $RuntimeParameterDictionary.Add("offsetX", (Get-DynamicParam -name "offsetX" -type int))
+                $RuntimeParameterDictionary.Add("offsetX", (Get-DynamicParam -name "offsetX" -Type int))
                 $RuntimeParameterDictionary.Add("offsetY", (Get-DynamicParam -name "offsetY" -type int))
             }
         }
@@ -1184,13 +1258,17 @@ function Invoke-SeMouse(){
     }
     process{
         if($PSCmdlet.ParameterSetName -eq "Driver"){
-            if($NULL -ne $offsetX){
-                $DriverList.Mouse.$MouseEvent($Coordinates, $offsetX, $offsetY)
-            }else{
-                $DriverList.Mouse.$MouseEvent($Coordinates)
+            foreach($driver in $DriverList){
+                if($NULL -ne $offsetX){
+                    $DriverList.Mouse.$MouseEvent($Coordinates, $offsetX, $offsetY)
+                }else{
+                    $DriverList.Mouse.$MouseEvent($Coordinates)
+                }
             }
         }else{
-            $ElementList.Click()
+            foreach($Element in $ElementList){
+                $ElementList.Click()
+            }
         }
     }
 }
