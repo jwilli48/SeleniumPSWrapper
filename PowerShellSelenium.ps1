@@ -6,6 +6,7 @@ Functions to ease use of Selenium Webdriver to be used inside of Windows PowerSh
 .NOTE
     Dynamic Params: If you have a custom type as a param, the dynamic params will not show up visually with tab completion / Intellisense after that one has been set in the function.
     FIX: Make the custom object a dynamic parm that is always created
+
 #>
 
 #Load needed modules
@@ -20,6 +21,10 @@ function Start-SeChrome {
     Returns a Selenium Chromedriver object
     .PARAMETER CustomOptions
     Any additional parameters you would like, I included the switches for common ones.
+    .PARAMETER ProfilePath
+    Please note that if you try to open a browser with a profile that is already open then it will freeze Selenium. You must close all other instances of chrome first.
+    Also you must leave the "\default" off of the path as ChromeDriver adds it itself. 
+    Example : "$env:LOCALAPPDATA\Google\Chrome\User Data" would stat chrome with your default profile.
     .EXAMPLE
     $driver = Start-SeChrome -Maximized
     .EXAMPLE
@@ -32,7 +37,8 @@ function Start-SeChrome {
         [switch]$MuteAudio,
         [switch]$Maximized,
         [switch]$Incognito,
-        [string[]]$CustomOptions
+        [string[]]$CustomOptions,
+        [string]$ProfilePath
     )
     process {
         [OpenQA.Selenium.Chrome.ChromeOptions]$chrome_options = New-Object OpenQA.Selenium.Chrome.ChromeOptions
@@ -53,6 +59,10 @@ function Start-SeChrome {
             foreach($option in $CustomOptions){
                 $chrome_options.AddArgument($option)
             }
+        }
+        if ($NULL -ne $ProfilePath){
+            $chrome_options.AddArgument("--user-data-dir=$ProfilePath")
+            $chrome_options.AddArgument("no-sandbox")
         }
         if ($chrome_options.Arguments -eq 0) {
             New-Object -TypeName OpenQA.Selenium.Chrome.ChromeDriver
@@ -89,15 +99,7 @@ function Start-SeFireFox {
         if ($Maximized) { $firefox_options.AddArgument("--start-maximized")}
         if ($MuteAudio) { $firefox_options.SetPreference("media.volume_scale", "0.0")}
         if ($Private) { $firefox_options.AddArgument("-private")}
-        if ($ProfileManager) {
-            if ($NULL -ne $ProfileName) {
-                $firefox_options.AddArgument("-P `"$ProfileName`"")
-            }
-            else {
-                $firefox_options.AddArgument("-P")
-            }
-        }
-         if ($NULL -ne $CustomOptions){
+        if ($NULL -ne $CustomOptions){
             foreach($option in $CustomOptions){
                 $firefox_options.AddArgument($option)
             }
@@ -575,7 +577,7 @@ function Set-SeUrl {
     }
 }
 
-function Close-SeDriver {
+function Quit-SeDriver {
     <#
     .SYNOPSIS
     Closes the driver completely
@@ -590,7 +592,7 @@ function Close-SeDriver {
     Close-SeDriver -DriverList $a, $b, $c
     
     .NOTES
-    Using $driver.Clos() will only close the tab
+    Using $driver.Close() will only close the current tab
     #>
     [CmdletBinding()]
     param(
@@ -884,25 +886,26 @@ function Get-SeElementScreenShot {
     Tries to screen shot specific elements
     
     .DESCRIPTION
-    This is not working. The offset for the location of the images is not correct based on the screen shot of the page and it is cropping the wrong part of the image.
+    This is not working. The offset for the location of the images is not correct based on the screen shot of the page and it is cropping the wrong part of the image. Dependant on the Get-SeScreenshot function.
     
     .PARAMETER DriverList
-    Parameter description
+    Arrat if WebDrivers
     
     .PARAMETER ElementList
-    Parameter description
+    Array of elements to crop the picture to
     
     .PARAMETER Format
-    Parameter description
+    Format to save image
     
     .PARAMETER DestinationDirectory
-    Parameter description
+    Directory to save all of the images, will make the directort if it doesnt exist
     
     .PARAMETER FileBaseName
-    Parameter description
+    Base file name, will have a number appened to the end of it for each file
     
     .EXAMPLE
-    An example
+    $ElementList = Invoke-SeFineElements -DriverList $driver -By CssSelector -Locator table
+    Get-SeElementScreenshot -DriverList $driver -ElementList $ElementList $Format Jpeg $DestinationDirectory "$home\desktop\temp" -FileBaseName CropImage
     
     .NOTES
     Not working currently very well (crops image incorrectly). 
@@ -967,6 +970,28 @@ function Get-SeElementScreenShot {
 }
 
 function Invoke-SeNavigate{
+    <#
+    .SYNOPSIS
+    Invokes the driver navigate command
+    
+    .DESCRIPTION
+    Uses the browser navigate class to move the browser forward, back, refresh the page or go to new url. Predefined navigate options can be tab autocompleted.
+    
+    .PARAMETER DriverList
+    Array of WebDrivers
+    
+    .PARAMETER Navigate
+    Navigate option :Back, Forward or Refresh. Each is the same as doing it manually in a browser window.
+    
+    .PARAMETER Url
+    If chosen will navigate to that URL.
+    
+    .EXAMPLE
+    Invoke-SeNavigate -Navigate Back -DriverList $a, $b, $c
+    
+    .NOTES
+    General notes
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
@@ -975,7 +1000,7 @@ function Invoke-SeNavigate{
         [ValidateSet("Back", "Forward", "Refresh")]
         $Navigate,
         [Parameter(Mandatory = $true, ParameterSetName = "Url")]
-        [String]$Url
+        [System.Uri]$Url
     )
     process{
         Foreach($Driver in $DriverList){
@@ -989,6 +1014,25 @@ function Invoke-SeNavigate{
 }
 
 function Invoke-SeSwitchTo{
+    <#
+    .SYNOPSIS
+    Invokes the drivers SwitchTo class options
+    
+    .DESCRIPTION
+    Allows you to switch to various parts of the browser. There are options to switch to an ActiveElement, any Alert that is present, default content of page, a specified frame or parentframe or a window (tab).
+    
+    .PARAMETER DriverList
+    This is a parameter to accept an array of WebDrivers, may not show up in Get-Help as it needs to be dynamic to get around a bug with dynamic params.
+
+    .PARAMETER SwitchTo
+    Option to witch to. Dynamic params will become available based on the option that is chosen.
+    
+    .EXAMPLE
+    Invoke-SeSwitchTo
+    
+    .NOTES
+    General notes
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
