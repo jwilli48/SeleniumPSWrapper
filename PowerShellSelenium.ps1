@@ -57,8 +57,8 @@ function Start-SeChrome {
         if ($incognito) {
             $chrome_options.AddArgument("--incognito")
         }
-        if ($NULL -ne $CustomOptions){
-            foreach($option in $CustomOptions){
+        if ($NULL -ne $CustomOptions) {
+            foreach ($option in $CustomOptions) {
                 $chrome_options.AddArgument($option)
             }
         }
@@ -99,8 +99,8 @@ function Start-SeFireFox {
         if ($Maximized) { $firefox_options.AddArgument("--start-maximized")}
         if ($MuteAudio) { $firefox_options.SetPreference("media.volume_scale", "0.0")}
         if ($Private) { $firefox_options.AddArgument("-private")}
-        if ($NULL -ne $CustomOptions){
-            foreach($option in $CustomOptions){
+        if ($NULL -ne $CustomOptions) {
+            foreach ($option in $CustomOptions) {
                 $firefox_options.AddArgument($option)
             }
         }
@@ -890,7 +890,7 @@ function Get-SeElementScreenShot {
     Tries to screen shot specific elements
     
     .DESCRIPTION
-    This is not working. The offset for the location of the images is not correct based on the screen shot of the page and it is cropping the wrong part of the image. Dependant on the Get-SeScreenshot function.
+    Dependant on the Get-SeScreenshot function. The list of drivers should all be having the same pages and elements for each call of this function. It works by screenshotting the page for each driver then going through each of those screen shots and cropping out every Element in ElementList. Returns each of the images.
     
     .PARAMETER DriverList
     Arrat if WebDrivers
@@ -909,23 +909,10 @@ function Get-SeElementScreenShot {
     
     .EXAMPLE
     $ElementList = Invoke-SeFineElements -DriverList $driver -By CssSelector -Locator table
-    Get-SeElementScreenshot -DriverList $driver -ElementList $ElementList $Format Jpeg $DestinationDirectory "$home\desktop\temp" -FileBaseName CropImage
+    Get-SeElementScreenshot -DriverList $driver -ElementList $ElementList $Format Png $DestinationDirectory "$home\desktop\temp" -FileBaseName CropImage
     
     .NOTES
-    Not working currently very well (crops image incorrectly). 
-    Currently the MemoryStream limits the number of screenshots you can crop at a time. The way below would be to save the screenshots to a temp directory and get the data from the files one at a time then delete the temp. Besides the number of images you can crop though there is not difference that I can really tell, both don't crop it right.
-
-    When I have time this is probably a better way to do it:
-    $Screenshot = $driver.GetScreenShot()
-    $ScreenShot.Saveas("$home\temp\$tempname.format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
-
-    [System.Drawing.Image]$img = [System.Drawing.Image]::FromFile($tempfile)
-
-    $rect = New-Object System.Drawing.Rectangle($element.location.X, $element.location.Y, $element.size.Width, $element.size.Height)
-
-    [System.Drawing.Bitmap]$BmpImage = New-Object System.Drawing.Bitmap($img)
-    $crop = $BmpImage.Clone($Rect, $BmpImage.PixelFormat)
-    $crop.Save("$home\$temp\$tempname.$format", [System.Drawing.Imaging.ImageFormat]::$format)
+    
     #>
     [CmdletBinding(DefaultParameterSetName = "DontSave")]
     [OutputType([System.Drawing.Bitmap])]
@@ -949,31 +936,31 @@ function Get-SeElementScreenShot {
                 }})]
         [string]$FileBaseName
     )
-    process {
-        $ElementList = $ElementList | Select-Object -Unique
-        $ScreenShots = Get-SeScreenShot -DriverList $DriverList
-        $image_num = 0 
+    end {
+        $screenShots = Get-SeScreenShot -DriverList $DriverList
+        $driver_num = 0
         foreach ($ScreenShot in $ScreenShots) {
             foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.AsByteArray.Count)))
 
-                [System.Drawing.Rectangle] $crop = New-Object System.Drawing.Rectangle($element.location.X, $element.location.Y, $element.size.width, $element.size.height)
+                [System.Drawing.Rectangle] $crop = New-Object System.Drawing.Rectangle([System.Math]::Abs($element.location.X), [System.Math]::Abs($element.location.Y), [System.Math]::Abs($element.size.Width), [System.Math]::Abs($element.size.Height))
 
                 $image = $image.clone($crop, $image.PixelFormat)
                 if ($PSCmdlet.ParameterSetName -eq "SaveAs") {
                     if (-not (Test-Path $DestinationDirectory)) {
                         New-Item -ItemType Directory -Path $DestinationDirectory    
                     }
-                    $image.Save("$($DestinationDirectory)\$($FileBaseName)_$($image_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)                    
+                    $image.Save("$($DestinationDirectory)\$($FileBaseName)_$($driver_num)_$($image_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)                    
                 }
                 $image_num++
                 $image
             }
+            $driver_num++
         }
     }
 }
 
-function Invoke-SeNavigate{
+function Invoke-SeNavigate {
     <#
     .SYNOPSIS
     Invokes the driver navigate command
@@ -1000,24 +987,25 @@ function Invoke-SeNavigate{
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName="Navigate")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Navigate")]
         [ValidateSet("Back", "Forward", "Refresh")]
         $Navigate,
         [Parameter(Mandatory = $true, ParameterSetName = "Url")]
         [System.Uri]$Url
     )
-    process{
-        Foreach($Driver in $DriverList){
-            if($PSCmdlet.ParameterSetName -eq "Url"){
+    process {
+        Foreach ($Driver in $DriverList) {
+            if ($PSCmdlet.ParameterSetName -eq "Url") {
                 $Driver.Navigate().GoToUrl($Url)
-            }else{
+            }
+            else {
                 $Driver.Navigate().$Navigate()
             }
         }
     }
 }
 
-function Invoke-SeSwitchTo{
+function Invoke-SeSwitchTo {
     <#
     .SYNOPSIS
     Invokes the drivers SwitchTo class options
@@ -1043,23 +1031,23 @@ function Invoke-SeSwitchTo{
         [ValidateSet("ActiveElement", "Alert", "DefaultContent", "Frame", "ParentFrame", "Window")]
         [string]$SwitchTo
     )
-    DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
         $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
-        switch ($SwitchTo){
-            "Frame"{
+        switch ($SwitchTo) {
+            "Frame" {
                 $RuntimeParameterDictionary.Add('FrameIndex', (Get-DynamicParam -name 'FrameIndex' -type int -mandatory -SetName "Index"))
                 $RuntimeParameterDictionary.Add('FrameName', (Get-DynamicParam -name 'FrameName' -type string -mandatory -SetName "Name"))
                 $RuntimeParameterDictionary.Add('FrameElement', (Get-DynamicParam -name "FrameElement" -type OpenQA.Selenium.IWebElement -mandatory -SetName "Element"))
-            }"Window"{
+            }"Window" {
                 $RuntimeParameterDictionary.Add("windowHandleOrName", (Get-DynamicParam -name "windowHandleOrName" -type string -mandatory))
             }
         }
         $RuntimeParameterDictionary
     }
-    begin{
+    begin {
         #This standard block of code loops through bound parameters...
         #It is for the Dynamic Params to make sure they have a variable assigned to them.
         #If no corresponding variable exists, one is created
@@ -1075,24 +1063,23 @@ function Invoke-SeSwitchTo{
         #Appropriate variables should now be defined and accessible
         #Get-Variable -scope 0
     }
-    process{
-        foreach($driver in $driverList){
-            switch ($SwitchTo)
-            {
-                "Frame"{
-                    switch ($FrameIndex, $FrameName, $FrameElement){
-                        $NULL{}
-                        default{
+    process {
+        foreach ($driver in $driverList) {
+            switch ($SwitchTo) {
+                "Frame" {
+                    switch ($FrameIndex, $FrameName, $FrameElement) {
+                        $NULL {}
+                        default {
                             $Locator = $_
                             break
                         }
                     }
                     $driver.SwitchTo().Frame($Locator)
                     break
-                }"Window"{
+                }"Window" {
                     $driver.SwitchTo().Window($windowHandleOrName)
                     break
-                }default{
+                }default {
                     $driver.SwitchTo().$SwitchTo()
                 }
             }
@@ -1100,7 +1087,7 @@ function Invoke-SeSwitchTo{
     }
 }
 
-function Invoke-SeKeyboard{
+function Invoke-SeKeyboard {
     <#
     .SYNOPSIS
     Takes a key event you would like to do
@@ -1130,23 +1117,22 @@ function Invoke-SeKeyboard{
         [ValidateSet("PressKey", "ReleaseKey", "SendKeys")]
         [string]$KeyEvent
     )
-    DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
         $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline -SetName "Driver"))
 
-        switch ($KeyEvent)
-        {
-            "PressKey"{
+        switch ($KeyEvent) {
+            "PressKey" {
                 $RuntimeParameterDictionary.Add("keyToPress", (Get-DynamicParam -name "keyToPress" -Type string -mandatory -ValidateSet ("Add", "Alt", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "Backspace", "Cancel", "Clear", "Command", "Control", "Decimal", "Delete", "Divide", "Down", "End", "Enter", "Equal", "Escape", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Help", "Home", "Insert", "Left", "LeftAlt", "LeftControl", "LeftShift", "Meta", "Multiply", "Null", "NumberPAd0", "NumberPad1", "NumberPad2", "NumberPad3", "NumberPad4", "NumberPad5", "NumberPad6", "NumberPad7", "NumberPad8", "NumberPad9", "PageDown", "PageUp", "Pause", "Return", "Right", "Semicolon", "Separator", "Shift", "Space", "Subtract", "Tab", "Up")))
-            }"ReleaseKey"{
+            }"ReleaseKey" {
                 $RuntimeParameterDictionary.Add("keyToRelease", (Get-DynamicParam -name "keyToRelease" -Type string -mandatory -ValidateSet ("Add", "Alt", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "Backspace", "Cancel", "Clear", "Command", "Control", "Decimal", "Delete", "Divide", "Down", "End", "Enter", "Equal", "Escape", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Help", "Home", "Insert", "Left", "LeftAlt", "LeftControl", "LeftShift", "Meta", "Multiply", "Null", "NumberPAd0", "NumberPad1", "NumberPad2", "NumberPad3", "NumberPad4", "NumberPad5", "NumberPad6", "NumberPad7", "NumberPad8", "NumberPad9", "PageDown", "PageUp", "Pause", "Return", "Right", "Semicolon", "Separator", "Shift", "Space", "Subtract", "Tab", "Up")))
-            }"SendKeys"{
+            }"SendKeys" {
                 $RuntimeParameterDictionary.Add("keySequence", (Get-DynamicParam -name "keySequence" -type string -mandatory ))
             }
         }
         $RuntimeParameterDictionary
     }
-    begin{
+    begin {
         #This standard block of code loops through bound parameters...
         #It is for the Dynamic Params to make sure they have a variable assigned to them.
         #If no corresponding variable exists, one is created
@@ -1160,22 +1146,21 @@ function Invoke-SeKeyboard{
             }
         }
     }
-    process{
-        foreach($driver in $DriverList){
-            switch ($KeyEvent)
-            {
-                "PressKey"{
+    process {
+        foreach ($driver in $DriverList) {
+            switch ($KeyEvent) {
+                "PressKey" {
                     $driver.Keyboard.PressKey([OpenQA.Selenium.Keys]::$keyToPress)
-                }"ReleaseKey"{
+                }"ReleaseKey" {
                     $driver.Keyboard.ReleaseKey([OpenQA.Selenium.Keys]::$keyToRelease)
-                }"SendKeys"{
+                }"SendKeys" {
                     $driver.Keyboard.SendKeys($keySequence)
                 }
             }
         }
     }
 }
-function Invoke-SeMouseClick(){
+function Invoke-SeMouseClick() {
     <#
     .SYNOPSIS
     Invoke commands normally done with a mouse
@@ -1205,18 +1190,18 @@ function Invoke-SeMouseClick(){
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Element")]
         [OpenQA.Selenium.IWebElement[]]$ElementList
     )
-    DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
         
-        switch ($MouseEvent){
-            "MouseMove"{
+        switch ($MouseEvent) {
+            "MouseMove" {
                 $RuntimeParameterDictionary.Add("offsetX", (Get-DynamicParam -name "offsetX" -Type int))
                 $RuntimeParameterDictionary.Add("offsetY", (Get-DynamicParam -name "offsetY" -type int))
             }
         }
         $RuntimeParameterDictionary
     }
-    begin{
+    begin {
         #This standard block of code loops through bound parameters...
         #It is for the Dynamic Params to make sure they have a variable assigned to them.
         #If no corresponding variable exists, one is created
@@ -1233,47 +1218,46 @@ function Invoke-SeMouseClick(){
         #Get-Variable -scope 0
 
         #Validate both offset's are either set or not set
-        switch -regex ($offsetX)
-        {
-            "."{
-                switch -regex ($offsetY)
-                {
-                    "."{
+        switch -regex ($offsetX) {
+            "." {
+                switch -regex ($offsetY) {
+                    "." {
                         $true
-                    }$NULL{
+                    }$NULL {
                         throw "offsetX and Y must both be set or both be empty"
                     }
                 }
-            }$NULL{
-                switch -regex ($offsetX)
-                {
-                    $NULL{
+            }$NULL {
+                switch -regex ($offsetX) {
+                    $NULL {
                         $true
-                    }"."{
+                    }"." {
                         throw "offsetX and Y must both be set or both be empty"
                     }
                 }
             }
         }
     }
-    process{
-        if($PSCmdlet.ParameterSetName -eq "Driver"){
-            foreach($driver in $DriverList){
-                if($NULL -ne $offsetX){
+    process {
+        if ($PSCmdlet.ParameterSetName -eq "Driver") {
+            foreach ($driver in $DriverList) {
+                if ($NULL -ne $offsetX) {
                     $DriverList.Mouse.$MouseEvent($Coordinates, $offsetX, $offsetY)
-                }else{
+                }
+                else {
                     $DriverList.Mouse.$MouseEvent($Coordinates)
                 }
             }
-        }else{
-            foreach($Element in $ElementList){
+        }
+        else {
+            foreach ($Element in $ElementList) {
                 $ElementList.Click()
             }
         }
     }
 }
 
-function Invoke-SeChromeCommand{
+function Invoke-SeChromeCommand {
     <#
     .SYNOPSIS
     Executes custom Chrome command
@@ -1300,9 +1284,9 @@ function Invoke-SeChromeCommand{
         [Parameter(Mandatory = $true)]
         [string]$commandName,
         [Parameter(Mandatory = $true)]
-        [System.Collections.Generic.Dictionary[string,System.Object]]$commandParameters
+        [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters
     )
-    Process{
+    Process {
         $Driver.ExecuteChromeCommand($commandName, $commandParameters)
     }
 }
