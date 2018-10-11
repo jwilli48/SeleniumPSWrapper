@@ -168,6 +168,9 @@ function Invoke-SeJavaScript {
     .PARAMETER scripts
     One or more scripts to be run, stored as an array of strings. 
     
+    .PARAMETER Arguments
+    An array of objects to be used as arguments for input scripts. To be clear these arguments are will be the arguments for every script that is input. Your script should use the variable arguments[0] to reference the first argument, arguments[1] for the 2nd and so on. (there is no error if you input more arguments then what is used in the script, but it will error if you try to call or use more arguments then you have).
+
     .PARAMETER Async
     If set the scripts will be run as AsyncScripts
     
@@ -179,7 +182,7 @@ function Invoke-SeJavaScript {
     Invoke-JavaScript -DriverList $d -Script "window.open()"
 
     .NOTES
-    General notes
+    It was complicated to get the arguments to work correctly with powershell. It is suppose to allow you to pass in an array such as $driver.ExecuteScript("return (arguments[0] + arguments[1];", $ArgumentArray) but this kept throwing an error, I believe because it does not recognize the PowerShell format for arrays. It does work if you put each element of the array as parameters. With this I make a string for the command and input all of the arguments into a string (this allows me to put the commas between all of the arguments without knowing how many there are) then I turn the string into a scriptblock and invoke the command.
     #>
     [CmdletBinding()]
     param(
@@ -187,6 +190,7 @@ function Invoke-SeJavaScript {
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
         [Parameter(Mandatory = $true)]
         [string[]]$Scripts,
+        [System.Object[]]$Arguments,
         [switch]$Async
     )
     process {
@@ -194,7 +198,17 @@ function Invoke-SeJavaScript {
             if ($Async) {
                 ForEach ($script in $scripts) {
                     try {
-                        $driver.ExecuteAsyncScript($script);
+                        if($NULL -ne $Arguments){
+                            [string]$command = '$driver.ExecuteAsyncScript($script,'
+                            for($i = 0; $i -lt $arguments.Count; $i++){
+                                $command += "`$Arguments[$i],"
+                            }
+                            $command = $command.TrimEnd(',') + ')'
+                            [scriptblock]::Create($command).Invoke()
+                        }
+                        else{
+                            $driver.ExecuteAsyncScript($script);
+                        }
                     }
                     catch {
                         Write-Verbose "ERROR: Invalid JavaScript used:`n$script"
@@ -204,7 +218,17 @@ function Invoke-SeJavaScript {
             else {
                 foreach ($script in $scripts) {
                     try {
-                        $driver.ExecuteScript($script)
+                        if ($NULL -ne $Arguments) {
+                            [string]$command = '$driver.ExecuteScript($script,'
+                            for ($i = 0; $i -lt $arguments.Count; $i++) {
+                                $command += "`$Arguments[$i],"
+                            }
+                            $command = $command.TrimEnd(',') + ')'
+                            [scriptblock]::Create($command).Invoke()
+                        }
+                        else {
+                            $driver.ExecuteScript($script);
+                        }
                     }
                     catch {
                         Write-Verbose "ERROR: Invalid JavaScript used:`n$script"
@@ -912,7 +936,7 @@ function Get-SeElementScreenShot {
     Get-SeElementScreenshot -DriverList $driver -ElementList $ElementList $Format Png $DestinationDirectory "$home\desktop\temp" -FileBaseName CropImage
     
     .NOTES
-    
+    This dows not seem to work well on certain computers. On my desktop it takes screenshots and crops as expected, but on my Microsoft Surface all of the images are cropped incorrectly.
     #>
     [CmdletBinding(DefaultParameterSetName = "DontSave")]
     [OutputType([System.Drawing.Bitmap])]
@@ -937,10 +961,12 @@ function Get-SeElementScreenShot {
         [string]$FileBaseName
     )
     end {
-        $screenShots = Get-SeScreenShot -DriverList $DriverList
-        $driver_num = 0
-        foreach ($ScreenShot in $ScreenShots) {
-            foreach ($Element in $ElementList) {
+        foreach ($Element in $ElementList) {
+            #Makes sure element is on screen before screenshot, it has to output in order to focus the element and go to it.
+            $element
+            $screenShots = Get-SeScreenShot -DriverList $DriverList
+            $driver_num = 0
+            foreach ($ScreenShot in $ScreenShots) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.AsByteArray.Count)))
 
                 [System.Drawing.Rectangle] $crop = New-Object System.Drawing.Rectangle([System.Math]::Abs($element.location.X), [System.Math]::Abs($element.location.Y), [System.Math]::Abs($element.size.Width), [System.Math]::Abs($element.size.Height))
@@ -952,10 +978,10 @@ function Get-SeElementScreenShot {
                     }
                     $image.Save("$($DestinationDirectory)\$($FileBaseName)_$($driver_num)_$($image_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)                    
                 }
-                $image_num++
+                $driver_num++
                 $image
             }
-            $driver_num++
+            $image_num++
         }
     }
 }
@@ -1090,7 +1116,7 @@ function Invoke-SeSwitchTo {
 function Invoke-SeKeyboard {
     <#
     .SYNOPSIS
-    Takes a key event you would like to do
+    Invokes a key event, not very reliable.
     
     .DESCRIPTION
     The main purpose of this command is to Press/Release keys as it is only for a WebDriver object. You should use the Send-SeSendKeys for most cases in my opinion.
