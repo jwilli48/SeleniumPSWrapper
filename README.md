@@ -7,6 +7,12 @@ My attempt to make as comprehensive a PS wrapper for Selenium as I can, specific
     -Missing Manage class implementation (for cookies / logs)
     -I want to add more helper functions (element attributes)
         
+    
+    General:
+        -OpenNewTab
+            -With URL
+            -Switch To
+                -If true switch focus to new tab
         
     Manage:
         -Cookies

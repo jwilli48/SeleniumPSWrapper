@@ -864,6 +864,9 @@ function Get-SeScreenShot {
     .PARAMETER FileBaseName
     The file name for the images, will add a 0,1, 2.... based on the order of images
     
+    .PARAMETER FullPage
+    This will let you take a screen shot of the entire page instead of just what is visible. This will only work with Chrome as the ExecuteChromeCommand method is needed.
+    
     .EXAMPLE
     Get-SeScreenshot -DriverList $a, $b -Format Png -DestinationDirectory "$home\desktop\temp" -FileBaseName browser_img
     #Will save two images browser_img_0.png and browser_img_1.png in the temp directory.
@@ -888,11 +891,20 @@ function Get-SeScreenShot {
                 else {
                     $true
                 }})]
-        $FileBaseName
+        $FileBaseName,
+        [switch]$FullPage
     )
     process {
         $image_number = 0
         foreach ($Driver in $DriverList) {
+            if($FullPage){
+                $metrics = [System.Collections.Generic.Dictionary[string, System.Object]]::new()
+                $metrics["width"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerWidth,document.body.scrollWidth,document.documentElement.scrollWidth)"
+                $metrics["height"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerHeight,document.body.scrollHeight,document.documentElement.scrollHeight)"
+                $metrics["deviceScaleFactor"] = [double](Invoke-SeJavaScript -DriverList $driver -Scripts "window.devicePixelRatio")
+                $metrics["mobile"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return typeof window.orientation !== 'undefined'"
+                Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.setDeviceMetricsOverride" -commandParameters $metrics
+            }
             $ScreenShot = $driver.GetScreenShot()
             if ($PSCmdlet.ParameterSetName -eq "SaveAs") {
                 if (-not (Test-Path $DestinationDirectory)) {
@@ -902,6 +914,7 @@ function Get-SeScreenShot {
             }
             $image_number++
             $ScreenShot
+            Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.clearDeviceMetricsOverride"
         }
     }
 }
@@ -916,6 +929,8 @@ function Get-SeElementScreenShot {
     .DESCRIPTION
     Dependant on the Get-SeScreenshot function. The list of drivers should all be having the same pages and elements for each call of this function. It works by screenshotting the page for each driver then going through each of those screen shots and cropping out every Element in ElementList. Returns each of the images.
     
+    Until I figure out how to get a full page screen shot this will only work for elements that are on the page / top of the browser that is screen shotted with Get-SeScreenshot
+
     .PARAMETER DriverList
     Arrat if WebDrivers
     
@@ -961,13 +976,12 @@ function Get-SeElementScreenShot {
         [string]$FileBaseName
     )
     end {
-        foreach ($Element in $ElementList) {
-            #Makes sure element is on screen before screenshot, it has to output in order to focus the element and go to it.
-            $element
-            $screenShots = Get-SeScreenShot -DriverList $DriverList
-            $driver_num = 0
-            foreach ($ScreenShot in $ScreenShots) {
-                [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.AsByteArray.Count)))
+        $screenShots = Get-SeScreenShot -DriverList $DriverList -FullPage
+        $driver_num = 0
+        foreach ($ScreenShot in $ScreenShots) {
+            $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)
+            foreach ($Element in $ElementList) {
+                [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.Count)))
 
                 [System.Drawing.Rectangle] $crop = New-Object System.Drawing.Rectangle([System.Math]::Abs($element.location.X), [System.Math]::Abs($element.location.Y), [System.Math]::Abs($element.size.Width), [System.Math]::Abs($element.size.Height))
 
@@ -978,10 +992,10 @@ function Get-SeElementScreenShot {
                     }
                     $image.Save("$($DestinationDirectory)\$($FileBaseName)_$($driver_num)_$($image_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)                    
                 }
-                $driver_num++
+                $image_num++
                 $image
             }
-            $image_num++
+            $driver_num++
         }
     }
 }
@@ -1295,13 +1309,18 @@ function Invoke-SeChromeCommand {
     Name of command to execute
     
     .PARAMETER commandParameters
-    Parameters of command to execute
+    Parameters of command to execute. It will default to an empty array if no params are needed
     
     .EXAMPLE
-    I am honestly not sure really how to use this, it is a part of the ChromeDriver object though and so I included this command for it.
+    $metrics = [System.Collections.Generic.Dictionary[string, System.Object]]::new()
+    $metrics["width"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerWidth,document.body.scrollWidth,document.documentElement.scrollWidth)"
+    $metrics["height"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerHeight,document.body.scrollHeight,document.documentElement.scrollHeight)"
+    $metrics["deviceScaleFactor"] = Invoke-SeJavaScript -DriverList $driver -Scripts "window.devicePixelRatio"
+    $metrics["mobile"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return typeof window.orientation !== 'undefined'"
+    $driver.ExecuteChromeCommand("Emulation.setDeviceMetricsOverride", $metrics)
     
     .NOTES
-    I am honestly not sure really how to use this, it is a part of the ChromeDriver object though and so I included this command for it.
+    Here is a site of possible commands (not all work very well), it is all the same style as the example shown: https://chromedevtools.github.io/devtools-protocol/
     #>
     [CmdletBinding()]
     Param(
@@ -1309,10 +1328,11 @@ function Invoke-SeChromeCommand {
         [OpenQA.Selenium.Chrome.ChromeDriver[]]$DriverList,
         [Parameter(Mandatory = $true)]
         [string]$commandName,
-        [Parameter(Mandatory = $true)]
-        [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters
+        [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters = ([System.Collections.Generic.Dictionary[string, System.Object]]::new())
     )
     Process {
-        $Driver.ExecuteChromeCommand($commandName, $commandParameters)
+        Foreach($Driver in $DriverList){
+            $Driver.ExecuteChromeCommand($commandName, $commandParameters)
+        }
     }
 }
