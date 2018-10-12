@@ -15,7 +15,7 @@ Functions to ease use of Selenium Webdriver to be used inside of Windows PowerSh
 [System.Reflection.Assembly]::LoadFrom("$PSScriptRoot\Selenium.WebDriverBackedSelenium.dll") | Out-Null
 Import-Module "$PSScriptRoot\GetDynamicParam.ps1"
 
-function Start-SeChrome {
+function New-SeChrome {
     <#
     .SYNOPSIS
     Returns a Selenium Chromedriver object
@@ -29,9 +29,9 @@ function Start-SeChrome {
     WARNING: I found using a profile to be buggy and cause random unintended issues.
 
     .EXAMPLE
-    $driver = Start-SeChrome -Maximized
+    $driver = New-SeChrome -Maximized
     .EXAMPLE
-    $driver = Start-SeChrome -Headless -MuteAudio
+    $driver = New-SeChrome -Headless -MuteAudio
     #>
     [cmdletbinding()]
     [OutputType([OpenQA.Selenium.Chrome.Chromedriver])]
@@ -71,7 +71,7 @@ function Start-SeChrome {
     }
 }
 
-function Start-SeFireFox {
+function New-SeFireFox {
     <#
     .SYNOPSIS
     Returns a Selenium FirefoxDriver object
@@ -80,9 +80,9 @@ function Start-SeFireFox {
 
     You can start FireFox with a profile / the profile manager by using "-P" with a custom path, or a specific profile with '-P "ProfileName"'. As a warning I have found using a profile can give uninteded errors and issues.
     .EXAMPLE
-    $driver = Start-SeFirefox -Maximized
+    $driver = New-SeFireFox -Maximized
     .EXAMPLE
-    $driver = Start-SeFirefox -Headless -MuteAudio
+    $driver = New-SeFireFox -Headless -MuteAudio
     #>
     [cmdletbinding()]
     [OutputType()]
@@ -124,8 +124,8 @@ function Get-SeDriverStatus {
     The Selenium WebDriver object. This can be an array of drivers as well. 
     
     .EXAMPLE
-    $cdriver = Start-SeChrome -Headless
-    $fdriver = Start-SeFirefox -Headless
+    $cdriver = New-SeChrome -Headless
+    $fdriver = New-SeFireFox -Headless
     Get-SeDriverStatus -Driver $cdriver,$fdriver
     
     .NOTES
@@ -175,7 +175,7 @@ function Invoke-SeJavaScript {
     If set the scripts will be run as AsyncScripts
     
     .EXAMPLE
-    Start-SeChrome | Invoke-Javascript -Script "while(!document.ready()); window.url = "https://gmail.com; return document.title;"
+    New-SeChrome | Invoke-Javascript -Script "while(!document.ready()); window.url = "https://gmail.com; return document.title;"
     
     .EXAMPLE
     #Create new tab
@@ -198,15 +198,15 @@ function Invoke-SeJavaScript {
             if ($Async) {
                 ForEach ($script in $scripts) {
                     try {
-                        if($NULL -ne $Arguments){
+                        if ($NULL -ne $Arguments) {
                             [string]$command = '$driver.ExecuteAsyncScript($script,'
-                            for($i = 0; $i -lt $arguments.Count; $i++){
+                            for ($i = 0; $i -lt $arguments.Count; $i++) {
                                 $command += "`$Arguments[$i],"
                             }
                             $command = $command.TrimEnd(',') + ')'
                             [scriptblock]::Create($command).Invoke()
                         }
-                        else{
+                        else {
                             $driver.ExecuteAsyncScript($script);
                         }
                     }
@@ -897,7 +897,7 @@ function Get-SeScreenShot {
     process {
         $image_number = 0
         foreach ($Driver in $DriverList) {
-            if($FullPage){
+            if ($FullPage) {
                 $metrics = [System.Collections.Generic.Dictionary[string, System.Object]]::new()
                 $metrics["width"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerWidth,document.body.scrollWidth,document.documentElement.scrollWidth)"
                 $metrics["height"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerHeight,document.body.scrollHeight,document.documentElement.scrollHeight)"
@@ -929,7 +929,7 @@ function Get-SeElementScreenShot {
     .DESCRIPTION
     Dependant on the Get-SeScreenshot function. The list of drivers should all be having the same pages and elements for each call of this function. It works by screenshotting the page for each driver then going through each of those screen shots and cropping out every Element in ElementList. Returns each of the images.
     
-    This now does work with the full page for any element on the page (only works with chrome for the full page). It will also save the base image / the full page image so you see where all of the elements are located on the page as well as the images of the elements. This will probably become a switch at some point.
+    This now does work with the full page for any element on the page (only works with chrome for the full page).
 
     .PARAMETER DriverList
     Arrat if WebDrivers
@@ -946,6 +946,9 @@ function Get-SeElementScreenShot {
     .PARAMETER FileBaseName
     Base file name, will have a number appened to the end of it for each file
     
+    .PARAMETER SaveBaseImage
+    Switch to designate if you would like to save the full page screen shot beside the images of the elements.
+
     .EXAMPLE
     $ElementList = Invoke-SeFineElements -DriverList $driver -By CssSelector -Locator table
     Get-SeElementScreenshot -DriverList $driver -ElementList $ElementList $Format Png $DestinationDirectory "$home\desktop\temp" -FileBaseName CropImage
@@ -980,7 +983,7 @@ function Get-SeElementScreenShot {
         $screenShots = Get-SeScreenShot -DriverList $DriverList -FullPage
         $driver_num = 0
         foreach ($ScreenShot in $ScreenShots) {
-            if($SaveBaseImage){
+            if ($SaveBaseImage) {
                 $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)
             }
             foreach ($Element in $ElementList) {
@@ -1334,8 +1337,128 @@ function Invoke-SeChromeCommand {
         [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters = ([System.Collections.Generic.Dictionary[string, System.Object]]::new())
     )
     Process {
-        Foreach($Driver in $DriverList){
+        Foreach ($Driver in $DriverList) {
             $Driver.ExecuteChromeCommand($commandName, $commandParameters)
+        }
+    }
+}
+
+function Invoke-SeManageCookies {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("AddCookie", "DeleteAllCookies", "DeleteCookie", "DeleteCookieNamed", "GetCookieNamed", "GetAllCookies")]
+        [string]$Option
+    )
+    DynamicParam {
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
+
+        switch ($option)
+        {
+            "AddCookie"{
+                $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
+            }"DeleteCookie"{
+                $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
+            }"DeleteCookieName"{
+                $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
+            }"GetCookieNamed"{
+                $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
+            }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin {
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process{
+        switch ($Option)
+        {
+            "AddCookie"{
+                $Driver.Manage().Cookies.AddCookie($cookie)
+            }"DeleteAllCookies"{
+                $Driver.Manage().Cookies.DeleteAllCookies()
+            }"DeleteCookie"{
+                $Driver.Manage().Cookies.DeleteCookie($cookie)
+            }"DeleteCookieNamed"{
+                $Driver.Manage().Cookies.DeleteCookieNamed($name)
+            }"GetCookieNamed"{
+                $Driver.Manage().Cookies.GetCookieNamed($name)
+            }"GetAllCookies"{
+                $Driver.Manage().Cookies.AllCookies
+            }
+        }
+    }
+}
+
+function New-SeCookie {
+    <#
+    .SYNOPSIS
+    Returns a new cookie object
+    
+    .PARAMETER name
+    Mandatory param, name of cookie
+    
+    .PARAMETER value
+    Mandatory param, value for cookie
+    
+    .PARAMETER domain
+    Cookies domain attribute
+    
+    .PARAMETER path
+    Cookie path attribute
+    
+    .PARAMETER expiry
+    Cookie expiry attribute
+    
+    .EXAMPLE
+    $cookie = New-SeCookie -name "test1" -value "testValue"
+    
+    .EXAMPLE
+    $cookieParams = [System.Collections.Generic.Dictionary[string, System.Object]]::new()
+    $cookieParams["name"] = "CookieName"
+    $cookieParams["value"] = "CookieValue"
+    $cookieParams["domain"] = "CookieDomain"
+    $cookie = New-SeCookie -CookieDictionary $cookieParams
+
+    .NOTES
+    General notes
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ParameterSetName = "string")]
+        [string]$name,
+        [Parameter(Mandatory = $true, ParameterSetName = "string")]
+        [string]$value,
+        [Parameter(ParameterSetName = "string")]
+        [string]$domain,
+        [Parameter(ParameterSetName = "string")]
+        [string]$path,
+        [Parameter(ParameterSetName = "string")]
+        [System.Nullable[datetime]]$expiry,
+        [Parameter(Mandatory = $true, ParameterSetName = "dictionary")]
+        [System.Collections.Generic.Dictionary[string, System.Object]]$CookieParams
+    )
+    process{
+        if($PSCmdlet.ParameterSetName -eq "string"){
+            New-Object OpenQA.Selenium.Cookie ($name, $value, $domain, $path, $expiry)
+        }else{
+            New-Object OpenQA.Selenium.Cookie ($CookieParams)
         }
     }
 }
