@@ -929,7 +929,7 @@ function Get-SeElementScreenShot {
     .DESCRIPTION
     Dependant on the Get-SeScreenshot function. The list of drivers should all be having the same pages and elements for each call of this function. It works by screenshotting the page for each driver then going through each of those screen shots and cropping out every Element in ElementList. Returns each of the images.
     
-    Until I figure out how to get a full page screen shot this will only work for elements that are on the page / top of the browser that is screen shotted with Get-SeScreenshot
+    This now does work with the full page for any element on the page (only works with chrome for the full page). It will also save the base image / the full page image so you see where all of the elements are located on the page as well as the images of the elements. This will probably become a switch at some point.
 
     .PARAMETER DriverList
     Arrat if WebDrivers
@@ -973,13 +973,16 @@ function Get-SeElementScreenShot {
                 else {
                     $true
                 }})]
-        [string]$FileBaseName
+        [string]$FileBaseName,
+        [switch]$SaveBaseImage
     )
     end {
         $screenShots = Get-SeScreenShot -DriverList $DriverList -FullPage
         $driver_num = 0
         foreach ($ScreenShot in $ScreenShots) {
-            $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)
+            if($SaveBaseImage){
+                $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)
+            }
             foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.Count)))
 
