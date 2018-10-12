@@ -1344,6 +1344,19 @@ function Invoke-SeChromeCommand {
 }
 
 function Invoke-SeManageCookies {
+    <#
+    .SYNOPSIS
+    Function to manage cookies for selenium webdriver
+    
+    .PARAMETER Option
+    Option for cookies, can do any of the following: AddCooie, DeleteAllCookies, DeleteCookie, DeleteCookieNamed, GetCookieNamed, GetAllCookies
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
@@ -1360,12 +1373,16 @@ function Invoke-SeManageCookies {
         {
             "AddCookie"{
                 $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
+                break
             }"DeleteCookie"{
                 $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
+                break
             }"DeleteCookieName"{
                 $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
+                break
             }"GetCookieNamed"{
                 $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
+                break
             }
         }
         $RuntimeParameterDictionary
@@ -1387,20 +1404,28 @@ function Invoke-SeManageCookies {
         #Get-Variable -scope 0
     }
     process{
-        switch ($Option)
-        {
-            "AddCookie"{
-                $Driver.Manage().Cookies.AddCookie($cookie)
-            }"DeleteAllCookies"{
-                $Driver.Manage().Cookies.DeleteAllCookies()
-            }"DeleteCookie"{
-                $Driver.Manage().Cookies.DeleteCookie($cookie)
-            }"DeleteCookieNamed"{
-                $Driver.Manage().Cookies.DeleteCookieNamed($name)
-            }"GetCookieNamed"{
-                $Driver.Manage().Cookies.GetCookieNamed($name)
-            }"GetAllCookies"{
-                $Driver.Manage().Cookies.AllCookies
+        Foreach($Driver in $DriverList){
+            switch ($Option)
+            {
+                "AddCookie"{
+                    $Driver.Manage().Cookies.AddCookie($cookie)
+                    break
+                }"DeleteAllCookies"{
+                    $Driver.Manage().Cookies.DeleteAllCookies()
+                    break
+                }"DeleteCookie"{
+                    $Driver.Manage().Cookies.DeleteCookie($cookie)
+                    break
+                }"DeleteCookieNamed"{
+                    $Driver.Manage().Cookies.DeleteCookieNamed($name)
+                    break
+                }"GetCookieNamed"{
+                    $Driver.Manage().Cookies.GetCookieNamed($name)
+                    break
+                }"GetAllCookies"{
+                    $Driver.Manage().Cookies.AllCookies
+                    break
+                }
             }
         }
     }
@@ -1459,6 +1484,213 @@ function New-SeCookie {
             New-Object OpenQA.Selenium.Cookie ($name, $value, $domain, $path, $expiry)
         }else{
             New-Object OpenQA.Selenium.Cookie ($CookieParams)
+        }
+    }
+}
+
+function Invoke-SeManageLogs{
+    <#
+    .SYNOPSIS
+    Function to manage webdriver logs class
+    
+    .PARAMETER Option
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    I don't know much about the logs other then by defualt they seem to be off as I never see anything inside of them when calling these options
+
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("GetLog", "AvailableLogTypes")]
+        [string]$Option
+    )
+    DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
+
+        switch ($Option)
+        {
+            "GetLog"{
+                $RuntimeParameterDictionary.Add("logKind", (Get-DynamicParam -name "logKind" -Type string -mandatory))
+                break
+            }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin {
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process{
+        Foreach($Driver in $DriverList){
+            switch ($Option)
+            {
+                "GetLog"{
+                    $Driver.Manage().Logs.GetLog($logKind)
+                    break
+                }"AvailableLogTypes"{
+                    $Driver.Manage().Logs.AvailableLogTypes
+                    break
+                }
+            }
+        }
+    }
+}
+
+function Invoke-SeManageWindow {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("FullScreen", "Maximize", "Minimize", "Position", "Size", "CurrentAttributes")]
+        [string]$Option
+    )
+    DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
+
+        switch ($Option)
+        {
+            "Position"{
+                $RuntimeParameterDictionary.Add("Point", (Get-DynamicParam -name "Point" -Type System.Drawing.Point -mandatory -SetName "Point"))
+                $RuntimeParameterDictionary.Add("X", (Get-DynamicParam -name "X" -type int -mandatory -SetName "Value"))
+                $RuntimeParameterDictionary.Add("Y", (Get-DynamicParam -name "Y" -type int -mandatory -SetName "Value"))
+                break
+            }"Size"{
+                $RuntimeParameterDictionary.Add("Size", (Get-DynamicParam -name "Size" -Type System.Drawing.Size -mandatory -SetName "Size"))
+                $RuntimeParameterDictionary.Add("Width", (Get-DynamicParam -name "Width" -type int -mandatory -SetName "Value"))
+                $RuntimeParameterDictionary.Add("Height", (Get-DynamicParam -name "Height" -type int -mandatory -SetName "Value"))
+                break
+            }
+        }
+        $RuntimeParameterDictionary
+    }
+    begin {
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process{
+        foreach($Driver in $DriverList){
+            switch ($Option)
+            {
+                "FullScreen"{
+                    $Driver.Manage().Window.FullScreen()
+                    break
+                }"Maximize"{
+                    $Driver.Manage().Window.FullScreen()
+                    break
+                }"Minimize"{
+                    $Driver.Manage().Window.Minimize()
+                    break
+                }"Position"{
+                    if($PSCmdlet.ParameterSetName -eq "Point"){
+                        $Driver.Manage().Window.Position = $Point
+                    }else{
+                        $Driver.Manage().Window.Position = New-Object System.Drawing.Point($X, $Y)
+                    }
+                    break
+                }"Size"{
+                    if($PSCmdlet.ParameterSetName -eq "Size"){
+                        $Driver.Manage().Window.Size = $Size
+                    }else{
+                        $Driver.Manage().Window.Size = New-Object System.Drawing.Size($Width, $Height)
+                    }
+                }"CurrentAttributes"{
+                    $Driver.Manage().Window
+                }
+            }
+        }
+    }
+
+}
+
+function Invoke-SeManageTimeouts {
+    <#
+    .SYNOPSIS
+    Get or set timeouts, does not work with ChromeDriver \ some others (just use the WaitUntil commands)
+    
+    .PARAMETER DriverList
+    Parameter description
+    
+    .PARAMETER Set
+    Parameter description
+    
+    .PARAMETER value
+    Parameter description
+    
+    .PARAMETER Get
+    Parameter description
+    
+    .NOTES
+    General notes
+    #>
+    [Cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
+        [Parameter(Mandatory = $true, ParameterSetName = "Set")]
+        [ValidateSet("AsynchronousJavaScript", "ImplicitWait", "PageLoad")]
+        [string]$Set,
+        [Parameter(Mandatory = $true, ParameterSetName = "Set")]
+        [timespan]$value,
+        [Parameter(Mandatory = $true, ParameterSetName = "Get")]
+        [ValidateSet("AsynchronousJavaScript", "ImplicitWait", "PageLoad")]
+        [string]$Get
+    )
+    begin {
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process{
+        foreach($Driver in $DriverList){
+            if($PSCmdlet.ParameterSetName -eq "Set"){
+                $Driver.Manage().Timeouts().$Set = $value
+            }else{
+                $Driver.Manage().Timeouts().$Get
+            }
         }
     }
 }
