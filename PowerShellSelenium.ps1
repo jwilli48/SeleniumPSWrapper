@@ -571,6 +571,37 @@ function Invoke-SeWaitUntil {
     }
 }
 
+function Get-SeElementAttribute{
+    <#
+    .SYNOPSIS
+    Return specified attribute of element
+    
+    .PARAMETER ElementList
+    Parameter description
+    
+    .PARAMETER Value
+    Parameter description
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [OpenQA.Selenium.IWebElement[]]$ElementList,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]$Value
+    )
+    process{
+        Foreach($Element in $ElementList){
+            $Element.GetAtribute($value)
+        }
+    }
+}
+
 function Set-SeUrl {
     <#
     .SYNOPSIS
@@ -745,16 +776,26 @@ function Set-SeTabFocus {
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
         [Parameter(Mandatory = $true, ParameterSetName = "Number")]
         [int]$TabNumber,
+        [Parameter(Mandatory = $true, ParameterSetName = "Handle")]
+        [string[]]$WindowHandles,
         [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
         [regex]$UrlOrTitle
     )
     process {
+        $i = 0;
         Foreach ($driver in $DriverList) {
             if ($PSCmdlet.ParameterSetName -eq "Number") {
                 if ($TabNumber -gt $driver.WindowHandles.Count) {
                     throw "Tab number can't be greater then the number of tabs"
                 }
                 $driver.SwitchTo().Window($driver.WindowHandles[$TabNumber])
+            }
+            elseif($PSCmdlet -eq "Handle"){
+                try{
+                    $Driver.SwitchTo().Window($WindowHandles[$i])
+                }catch{
+                    throw "Driver did not contian Window Handle. Make sure the order of the handle array matches the driver array."
+                }
             }
             else {
                 $WindowHandles = $driver.WindowHandles
@@ -766,10 +807,61 @@ function Set-SeTabFocus {
                     }
                 }
             }
+            $i++
         }
     }
 }
 
+function Open-SeWindow{
+    <#
+    .SYNOPSIS
+    Opens a new tab/window
+    
+    .PARAMETER DriverList
+    Parameter description
+    
+    .PARAMETER Url
+    Parameter description
+    
+    .PARAMETER Name
+    Name of new window
+    
+    .PARAMETER Params
+    Params for the new window. This is just calling the JavaScript window.open() command, search that for param options.
+    
+    .PARAMETER DontSwitchTo
+    Will keep browser on current tab
+    
+    .PARAMETER ReplaceCurrentWindow
+    Parameter description
+    
+    .EXAMPLE
+    An example
+    
+    .NOTES
+    General notes
+    #>
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [OpenQA.Selenium.Remote.RemoteWebDriver[]]
+        $DriverList,
+        [System.Uri]$Url,
+        [string]$Name,
+        [string[]]$Params,
+        [switch]$DontSwitchTo,
+        [switch]$ReplaceCurrentWindow
+    )
+    process{
+        Foreach($Driver in $DriverList){
+            $CurrentWindow = $driver.CurrentWindowHandle
+            Invoke-SeJavaScript -DriverList $Driver -Scripts "window.open($Url, $Name, $Params, $ReplaceCurrentWindow`")"
+            if($DontSwitchTo){
+                Set-SeTabFocus -DriverList $driver -WindowHandles $CurrentWindow | Out-Null
+            }
+        }
+    }
+}
 function Close-SeTab {
     <#
     .SYNOPSIS
