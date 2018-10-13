@@ -13,7 +13,7 @@ Functions to ease use of Selenium Webdriver to be used inside of Windows PowerSh
 [System.Reflection.Assembly]::LoadFrom("$PSScriptRoot\WebDriver.dll") | Out-Null
 [System.Reflection.Assembly]::LoadFrom("$PSScriptRoot\WebDriver.Support.dll") | Out-Null
 [System.Reflection.Assembly]::LoadFrom("$PSScriptRoot\Selenium.WebDriverBackedSelenium.dll") | Out-Null
-Import-Module "$PSScriptRoot\GetDynamicParam.ps1"
+Import-Module "$PSScriptRoot\GetDynamicParam.ps1" -Force
 
 function New-SeChrome {
     <#
@@ -1469,7 +1469,7 @@ function Invoke-SeManageCookies {
             }"DeleteCookie"{
                 $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
                 break
-            }"DeleteCookieName"{
+            }"DeleteCookieNamed"{
                 $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
                 break
             }"GetCookieNamed"{
@@ -1783,6 +1783,109 @@ function Invoke-SeManageTimeouts {
             }else{
                 $Driver.Manage().Timeouts().$Get
             }
+        }
+    }
+}
+
+
+function Invoke-SeSelectElement {
+    [cmdletbinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("GetAllSelectedOptions", "GetIsMultiple", "GetOptions", "GetSelectedOption", "GetWrappedElement", "DeselectAll", "DeselectByIndex", "DeselectByText", "DeselectByValue", "SelectByIndex", "SelectByText", "SelectByValue")]
+        [string]$Action
+    )
+     DynamicParam{
+        $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+        #In order not to mess up other dynamic params all custom objects also need to be dynamic
+        $RuntimeParameterDictionary.Add('ElementList', (Get-DynamicParam -Name "ElementList" -type "OpenQA.Selenium.IWebElement[]" -mandatory -FromPipeline))
+
+        switch ($Action)
+        {
+            "DeselectByIndex"{
+                $RuntimeParameterDictionary.Add('Index', (Get-DynamicParam -Name "Index" -type int -mandatory))
+                break
+            }"DeselectByText"{
+                $RuntimeParameterDictionary.Add('Text', (Get-DynamicParam -Name "Text" -type string -mandatory))
+                break
+            }"DeselectByValue"{
+                $RuntimeParameterDictionary.Add("Value", (Get-DynamicParam -Name "Value" -type string -mandatory))
+                break
+            }"SelectByIndex"{
+                $RuntimeParameterDictionary.Add('Index', (Get-DynamicParam -Name "Index" -type int -mandatory))
+                break
+            }"SelectByText"{
+                $RuntimeParameterDictionary.Add('Text', (Get-DynamicParam -Name "Text" -type string -mandatory))
+                break
+            }"SelectByValue"{
+                $RuntimeParameterDictionary.Add("Value", (Get-DynamicParam -Name "Value" -type string -mandatory))
+                break
+            }
+        }
+       
+        $RuntimeParameterDictionary
+    }
+    begin {
+        #This standard block of code loops through bound parameters...
+        #It is for the Dynamic Params to make sure they have a variable assigned to them.
+        #If no corresponding variable exists, one is created
+        #Get common parameters, pick out bound parameters not in that set
+        Function _temp { [cmdletbinding()] param() }
+        $BoundKeys = $PSBoundParameters.keys | Where-Object { (get-command _temp | Select-Object -ExpandProperty parameters).Keys -notcontains $_}
+        foreach ($param in $BoundKeys) {
+            if (-not ( Get-Variable -name $param -scope 0 -ErrorAction SilentlyContinue ) ) {
+                New-Variable -Name $Param -Value $PSBoundParameters.$param
+                Write-Verbose "Adding variable for dynamic parameter '$param' with value '$($PSBoundParameters.$param)'"
+            }
+        }
+        #Appropriate variables should now be defined and accessible
+        #Get-Variable -scope 0
+    }
+    process {
+        <#"GetAllSelectedOptions", "GetIsMultiple", "GetOptions", "GetSelectedOption", "GetWrappedElement", "DeselectAll", "DeselectByIndex", "DeselectByValue", "SelectByIndex", "SelectByText", "SelectByValue"#>
+        foreach($element in $ElementList){
+            $SelectedElement = New-Object OpenQA.Selenium.Support.UI.SelectElement($element)  
+            switch ($Action)
+            {
+                "GetAllSelectedOptions"{
+                    $SelectedElement.AllSelectedOptions
+                    break
+                }"GetIsMultiple"{
+                    $SelectedElement.IsMultiple
+                    break
+                }"GetOptions"{
+                    $SelectedElement.Options
+                    break
+                }"GetSelectedOption"{
+                    $SelectedElement.SelectedOption
+                    break
+                }"GetWrappedElement"{
+                    $SelectedElement.WrappedElement
+                    break
+                }"DeselectAll"{
+                    $SelectedElement.DeselectAll()
+                    break
+                }"DeselectByIndex"{
+                    $SelectedElement.DeselectByIndex($Index)
+                    break
+                }"DeselectByText"{
+                    $SelectedElement.DeselectByText($Text)
+                    break
+                }"DeselectByValue"{
+                    $SelectedElement.DeslectByValue($Value)
+                    break
+                }"SelectByIndex"{
+                    $SelectedElement.SelectByIndex($Index)
+                    break
+                }"SelectByText"{
+                    $SelectedElement.SelectByText($Text)
+                    break
+                }"SelectByValue"{
+                    $SelectedElement.SelectByValue($Value)
+                    break
+                }
+            }       
         }
     }
 }
