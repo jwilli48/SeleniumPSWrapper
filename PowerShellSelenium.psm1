@@ -5,7 +5,7 @@ Functions to ease use of Selenium Webdriver to be used inside of Windows PowerSh
 
 .NOTE
     Dynamic Params: If you have a custom type as a param, the dynamic params will not show up visually with tab completion / Intellisense after that one has been set in the function.
-    FIX: Make the custom object a dynamic parm that is always created
+    FIX: Make the custom object a dynamic param that is always created
 
 #>
 
@@ -25,7 +25,7 @@ function New-SeChrome {
     If you wish to use a profile you can use a custom option of "--user-data-dir=$ProfilePath"
     Please note that if you try to open a browser with a profile that is already open then it will freeze Selenium. You must close all other instances of chrome first.
     Also you must leave the "\default" off of the path as ChromeDriver adds it itself. 
-    Example : "$env:LOCALAPPDATA\Google\Chrome\User Data" would stat chrome with your default profile.
+    Example : "$env:LOCALAPPDATA\Google\Chrome\User Data" would start chrome with your default profile.
     WARNING: I found using a profile to be buggy and cause random unintended issues.
 
     .EXAMPLE
