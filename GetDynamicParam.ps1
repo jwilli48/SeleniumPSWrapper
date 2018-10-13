@@ -2,15 +2,15 @@ function Get-DynamicParam {
     <#
     .SYNOPSIS
     Sets and returns an object that can be added to the RuntimeDefinedParameterDictionary object
-    .PARAMETER name
+    .PARAMETER Name
     Name of the dynamic parameter
-    .PARAMETER type
+    .PARAMETER Type
     The type of the dynamic parameter
     .PARAMETER Mandatory
     Sets Mandatory attribute to true
     .PARAMETER FromPipeline
     Will set the Parameter Attribute ValueFromePipeline to true
-    .PARAMETER position
+    .PARAMETER Position
     Sets the position
     .PARAMETER ValidateSet
     An array of strings to validate the parmameter input
@@ -70,12 +70,12 @@ function Get-DynamicParam {
     [OutputType([System.Management.Automation.RuntimeDefinedParameter])]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$name,
+        [string]$Name,
         [Parameter(Mandatory = $true)]
         [System.Type]$Type,
-        [switch]$mandatory,
+        [switch]$Mandatory,
         [switch]$FromPipeline,
-        $position,
+        $Position,
         [string[]]$ValidateSet,
         [System.Management.Automation.ScriptBlock]$ValidateScript,
         $HelpMessage,
