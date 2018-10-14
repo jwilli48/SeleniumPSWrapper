@@ -1,11 +1,13 @@
 <#
 Summer 2018
 Joshua Williamson
-Functions to ease use of Selenium Webdriver to be used inside of Windows PowerShell for Chrome browser automations.
+Functions to ease use of Selenium Webdriver inside of Windows PowerShell for Chrome \ FireFox browser automation.
 
 .NOTE
     Dynamic Params: If you have a custom type as a param, the dynamic params will not show up visually with tab completion / Intellisense after that one has been set in the function.
     FIX: Make the custom object a dynamic param that is always created
+
+    Commands need to be run when using Dynamic Params that allow you to use the direct variable name you want instead of using $PSBoundParameters to find them.
 
 #>
 
@@ -27,6 +29,8 @@ function New-SeChrome {
     Also you must leave the "\default" off of the path as ChromeDriver adds it itself. 
     Example : "$env:LOCALAPPDATA\Google\Chrome\User Data" would start chrome with your default profile.
     WARNING: I found using a profile to be buggy and cause random unintended issues.
+
+    This site has all of the possible (I believe it has all) command switches you can use: https://peter.sh/experiments/chromium-command-line-switches/
 
     .EXAMPLE
     $driver = New-SeChrome -Maximized
@@ -79,6 +83,9 @@ function New-SeFireFox {
     Any additional parameters you would like, I included the switches for common ones.
 
     You can start FireFox with a profile / the profile manager by using "-P" with a custom path, or a specific profile with '-P "ProfileName"'. As a warning I have found using a profile can give uninteded errors and issues.
+
+    You can see some possible optons to use here: https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options#Original_Document_Information
+    
     .EXAMPLE
     $driver = New-SeFireFox -Maximized
     .EXAMPLE
