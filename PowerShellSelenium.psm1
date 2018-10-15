@@ -1085,7 +1085,7 @@ function Get-SeElementScreenShot {
         $driver_num = 0
         foreach ($ScreenShot in $ScreenShots) {
             if ($SaveBaseImage) {
-                $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [System.Drawing.Imaging.ImageFormat]::$Format)
+                $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
             }
             foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.Count)))
