@@ -26,5 +26,7 @@ I included some relevant links along with some of the functions which I will inc
 * [Chrome Command Switches ](https://peter.sh/experiments/chromium-command-line-switches/) (for New-SeChrome)
 * [FireFox Geckodriver Download](https://github.com/mozilla/geckodriver/releases)
 * [FireFox Command Switches](https://developer.mozilla.org/en-US/docs/Mozilla/Command_Line_Options#Original_Document_Information) (for New-SeFirefox)
+* [CSS Selctor Resource](https://www.w3schools.com/cssref/css_selectors.asp)
+* [XPath Syntax](https://www.w3schools.com/xml/xpath_syntax.asp)
 
 ## TODO

@@ -599,7 +599,7 @@ function Get-SeElementAttribute{
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true)]
         [string]$Value
     )
     process{
@@ -621,7 +621,7 @@ function Set-SeUrl {
     Array of WebDriver objects
     
     .PARAMETER Url
-    Valid URL
+    Must be valid URL
     
     .EXAMPLE
     Set-SeUrl -DriverList $a, $b, $c -Url "https://gmail.com"
@@ -768,6 +768,8 @@ function Set-SeTabFocus {
     .PARAMETER TabNumber
     Tab to switch to
     
+    .PARAMETER WindowHandle
+    Them Window Handle of the window to switch too (Found through $driver.WindowHandle or Get-SeDriverStatus)
     .PARAMETER UrlOrTitle
     A regex that will match with a URL or Title of a tab. Will stop at the first tab that matches the expression or go all the way to the last tab and stop their.
 
