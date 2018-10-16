@@ -176,7 +176,7 @@ function Invoke-SeJavaScript {
     One or more scripts to be run, stored as an array of strings. 
     
     .PARAMETER Arguments
-    An array of objects to be used as arguments for input scripts. To be clear these arguments are will be the arguments for every script that is input. Your script should use the variable arguments[0] to reference the first argument, arguments[1] for the 2nd and so on. (there is no error if you input more arguments then what is used in the script, but it will error if you try to call or use more arguments then you have).
+    An array of objects to be used as arguments for input scripts. To be clear these arguments are will be the arguments for every script that is input. Your script should use the variable arguments[0] (in the JavaScript) to reference the first argument, arguments[1] for the 2nd and so on. (there is no error if you input more arguments then what is used in the script, but it will error if you try to call or use more arguments then you have).
 
     .PARAMETER Async
     If set the scripts will be run as AsyncScripts
@@ -578,7 +578,7 @@ function Invoke-SeWaitUntil {
     }
 }
 
-function Get-SeElementAttribute{
+function Get-SeElementAttribute {
     <#
     .SYNOPSIS
     Return specified attribute of element
@@ -602,8 +602,8 @@ function Get-SeElementAttribute{
         [Parameter(Mandatory = $true)]
         [string]$Value
     )
-    process{
-        Foreach($Element in $ElementList){
+    process {
+        Foreach ($Element in $ElementList) {
             $Element.GetAtribute($value)
         }
     }
@@ -799,10 +799,11 @@ function Set-SeTabFocus {
                 }
                 $driver.SwitchTo().Window($driver.WindowHandles[$TabNumber])
             }
-            elseif($PSCmdlet -eq "Handle"){
-                try{
+            elseif ($PSCmdlet -eq "Handle") {
+                try {
                     $Driver.SwitchTo().Window($WindowHandles[$i])
-                }catch{
+                }
+                catch {
                     throw "Driver did not contian Window Handle. Make sure the order of the handle array matches the driver array."
                 }
             }
@@ -821,7 +822,7 @@ function Set-SeTabFocus {
     }
 }
 
-function Open-SeWindow{
+function Open-SeWindow {
     <#
     .SYNOPSIS
     Opens a new tab/window
@@ -861,11 +862,11 @@ function Open-SeWindow{
         [switch]$DontSwitchTo,
         [switch]$ReplaceCurrentWindow
     )
-    process{
-        Foreach($Driver in $DriverList){
+    process {
+        Foreach ($Driver in $DriverList) {
             $CurrentWindow = $driver.CurrentWindowHandle
             Invoke-SeJavaScript -DriverList $Driver -Scripts "window.open($Url, $Name, $Params, $ReplaceCurrentWindow`")"
-            if($DontSwitchTo){
+            if ($DontSwitchTo) {
                 Set-SeTabFocus -DriverList $driver -WindowHandles $CurrentWindow | Out-Null
             }
         }
@@ -1470,18 +1471,17 @@ function Invoke-SeManageCookies {
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
         $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
 
-        switch ($option)
-        {
-            "AddCookie"{
+        switch ($option) {
+            "AddCookie" {
                 $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
                 break
-            }"DeleteCookie"{
+            }"DeleteCookie" {
                 $RuntimeParameterDictionary.Add("Cookie", (Get-DynamicParam -name "Cookie" -Type OpenQA.Selenium.Cookie -mandatory))
                 break
-            }"DeleteCookieNamed"{
+            }"DeleteCookieNamed" {
                 $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
                 break
-            }"GetCookieNamed"{
+            }"GetCookieNamed" {
                 $RuntimeParameterDictionary.Add("Name", (Get-DynamicParam -name "Name" -type string -mandatory))
                 break
             }
@@ -1504,26 +1504,25 @@ function Invoke-SeManageCookies {
         #Appropriate variables should now be defined and accessible
         #Get-Variable -scope 0
     }
-    process{
-        Foreach($Driver in $DriverList){
-            switch ($Option)
-            {
-                "AddCookie"{
+    process {
+        Foreach ($Driver in $DriverList) {
+            switch ($Option) {
+                "AddCookie" {
                     $Driver.Manage().Cookies.AddCookie($cookie)
                     break
-                }"DeleteAllCookies"{
+                }"DeleteAllCookies" {
                     $Driver.Manage().Cookies.DeleteAllCookies()
                     break
-                }"DeleteCookie"{
+                }"DeleteCookie" {
                     $Driver.Manage().Cookies.DeleteCookie($cookie)
                     break
-                }"DeleteCookieNamed"{
+                }"DeleteCookieNamed" {
                     $Driver.Manage().Cookies.DeleteCookieNamed($name)
                     break
-                }"GetCookieNamed"{
+                }"GetCookieNamed" {
                     $Driver.Manage().Cookies.GetCookieNamed($name)
                     break
-                }"GetAllCookies"{
+                }"GetAllCookies" {
                     $Driver.Manage().Cookies.AllCookies
                     break
                 }
@@ -1580,16 +1579,17 @@ function New-SeCookie {
         [Parameter(Mandatory = $true, ParameterSetName = "dictionary")]
         [System.Collections.Generic.Dictionary[string, System.Object]]$CookieParams
     )
-    process{
-        if($PSCmdlet.ParameterSetName -eq "string"){
+    process {
+        if ($PSCmdlet.ParameterSetName -eq "string") {
             New-Object OpenQA.Selenium.Cookie ($name, $value, $domain, $path, $expiry)
-        }else{
+        }
+        else {
             New-Object OpenQA.Selenium.Cookie ($CookieParams)
         }
     }
 }
 
-function Invoke-SeManageLogs{
+function Invoke-SeManageLogs {
     <#
     .SYNOPSIS
     Function to manage webdriver logs class
@@ -1609,15 +1609,14 @@ function Invoke-SeManageLogs{
         [ValidateSet("GetLog", "AvailableLogTypes")]
         [string]$Option
     )
-    DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
         $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
 
-        switch ($Option)
-        {
-            "GetLog"{
+        switch ($Option) {
+            "GetLog" {
                 $RuntimeParameterDictionary.Add("logKind", (Get-DynamicParam -name "logKind" -Type string -mandatory))
                 break
             }
@@ -1640,14 +1639,13 @@ function Invoke-SeManageLogs{
         #Appropriate variables should now be defined and accessible
         #Get-Variable -scope 0
     }
-    process{
-        Foreach($Driver in $DriverList){
-            switch ($Option)
-            {
-                "GetLog"{
+    process {
+        Foreach ($Driver in $DriverList) {
+            switch ($Option) {
+                "GetLog" {
                     $Driver.Manage().Logs.GetLog($logKind)
                     break
-                }"AvailableLogTypes"{
+                }"AvailableLogTypes" {
                     $Driver.Manage().Logs.AvailableLogTypes
                     break
                 }
@@ -1663,20 +1661,19 @@ function Invoke-SeManageWindow {
         [ValidateSet("FullScreen", "Maximize", "Minimize", "Position", "Size", "CurrentAttributes")]
         [string]$Option
     )
-    DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
         $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
 
-        switch ($Option)
-        {
-            "Position"{
+        switch ($Option) {
+            "Position" {
                 $RuntimeParameterDictionary.Add("Point", (Get-DynamicParam -name "Point" -Type System.Drawing.Point -mandatory -SetName "Point"))
                 $RuntimeParameterDictionary.Add("X", (Get-DynamicParam -name "X" -type int -mandatory -SetName "Value"))
                 $RuntimeParameterDictionary.Add("Y", (Get-DynamicParam -name "Y" -type int -mandatory -SetName "Value"))
                 break
-            }"Size"{
+            }"Size" {
                 $RuntimeParameterDictionary.Add("Size", (Get-DynamicParam -name "Size" -Type System.Drawing.Size -mandatory -SetName "Size"))
                 $RuntimeParameterDictionary.Add("Width", (Get-DynamicParam -name "Width" -type int -mandatory -SetName "Value"))
                 $RuntimeParameterDictionary.Add("Height", (Get-DynamicParam -name "Height" -type int -mandatory -SetName "Value"))
@@ -1701,33 +1698,34 @@ function Invoke-SeManageWindow {
         #Appropriate variables should now be defined and accessible
         #Get-Variable -scope 0
     }
-    process{
-        foreach($Driver in $DriverList){
-            switch ($Option)
-            {
-                "FullScreen"{
+    process {
+        foreach ($Driver in $DriverList) {
+            switch ($Option) {
+                "FullScreen" {
                     $Driver.Manage().Window.FullScreen()
                     break
-                }"Maximize"{
+                }"Maximize" {
                     $Driver.Manage().Window.FullScreen()
                     break
-                }"Minimize"{
+                }"Minimize" {
                     $Driver.Manage().Window.Minimize()
                     break
-                }"Position"{
-                    if($PSCmdlet.ParameterSetName -eq "Point"){
+                }"Position" {
+                    if ($PSCmdlet.ParameterSetName -eq "Point") {
                         $Driver.Manage().Window.Position = $Point
-                    }else{
+                    }
+                    else {
                         $Driver.Manage().Window.Position = New-Object System.Drawing.Point($X, $Y)
                     }
                     break
-                }"Size"{
-                    if($PSCmdlet.ParameterSetName -eq "Size"){
+                }"Size" {
+                    if ($PSCmdlet.ParameterSetName -eq "Size") {
                         $Driver.Manage().Window.Size = $Size
-                    }else{
+                    }
+                    else {
                         $Driver.Manage().Window.Size = New-Object System.Drawing.Size($Width, $Height)
                     }
-                }"CurrentAttributes"{
+                }"CurrentAttributes" {
                     $Driver.Manage().Window
                 }
             }
@@ -1785,11 +1783,12 @@ function Invoke-SeManageTimeouts {
         #Appropriate variables should now be defined and accessible
         #Get-Variable -scope 0
     }
-    process{
-        foreach($Driver in $DriverList){
-            if($PSCmdlet.ParameterSetName -eq "Set"){
+    process {
+        foreach ($Driver in $DriverList) {
+            if ($PSCmdlet.ParameterSetName -eq "Set") {
                 $Driver.Manage().Timeouts().$Set = $value
-            }else{
+            }
+            else {
                 $Driver.Manage().Timeouts().$Get
             }
         }
@@ -1804,30 +1803,29 @@ function Invoke-SeSelectElement {
         [ValidateSet("GetAllSelectedOptions", "GetIsMultiple", "GetOptions", "GetSelectedOption", "GetWrappedElement", "DeselectAll", "DeselectByIndex", "DeselectByText", "DeselectByValue", "SelectByIndex", "SelectByText", "SelectByValue")]
         [string]$Action
     )
-     DynamicParam{
+    DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
 
         #In order not to mess up other dynamic params all custom objects also need to be dynamic
         $RuntimeParameterDictionary.Add('ElementList', (Get-DynamicParam -Name "ElementList" -type "OpenQA.Selenium.IWebElement[]" -mandatory -FromPipeline))
 
-        switch ($Action)
-        {
-            "DeselectByIndex"{
+        switch ($Action) {
+            "DeselectByIndex" {
                 $RuntimeParameterDictionary.Add('Index', (Get-DynamicParam -Name "Index" -type int -mandatory))
                 break
-            }"DeselectByText"{
+            }"DeselectByText" {
                 $RuntimeParameterDictionary.Add('Text', (Get-DynamicParam -Name "Text" -type string -mandatory))
                 break
-            }"DeselectByValue"{
+            }"DeselectByValue" {
                 $RuntimeParameterDictionary.Add("Value", (Get-DynamicParam -Name "Value" -type string -mandatory))
                 break
-            }"SelectByIndex"{
+            }"SelectByIndex" {
                 $RuntimeParameterDictionary.Add('Index', (Get-DynamicParam -Name "Index" -type int -mandatory))
                 break
-            }"SelectByText"{
+            }"SelectByText" {
                 $RuntimeParameterDictionary.Add('Text', (Get-DynamicParam -Name "Text" -type string -mandatory))
                 break
-            }"SelectByValue"{
+            }"SelectByValue" {
                 $RuntimeParameterDictionary.Add("Value", (Get-DynamicParam -Name "Value" -type string -mandatory))
                 break
             }
@@ -1853,44 +1851,43 @@ function Invoke-SeSelectElement {
     }
     process {
         <#"GetAllSelectedOptions", "GetIsMultiple", "GetOptions", "GetSelectedOption", "GetWrappedElement", "DeselectAll", "DeselectByIndex", "DeselectByValue", "SelectByIndex", "SelectByText", "SelectByValue"#>
-        foreach($element in $ElementList){
+        foreach ($element in $ElementList) {
             $SelectedElement = New-Object OpenQA.Selenium.Support.UI.SelectElement($element)  
-            switch ($Action)
-            {
-                "GetAllSelectedOptions"{
+            switch ($Action) {
+                "GetAllSelectedOptions" {
                     $SelectedElement.AllSelectedOptions
                     break
-                }"GetIsMultiple"{
+                }"GetIsMultiple" {
                     $SelectedElement.IsMultiple
                     break
-                }"GetOptions"{
+                }"GetOptions" {
                     $SelectedElement.Options
                     break
-                }"GetSelectedOption"{
+                }"GetSelectedOption" {
                     $SelectedElement.SelectedOption
                     break
-                }"GetWrappedElement"{
+                }"GetWrappedElement" {
                     $SelectedElement.WrappedElement
                     break
-                }"DeselectAll"{
+                }"DeselectAll" {
                     $SelectedElement.DeselectAll()
                     break
-                }"DeselectByIndex"{
+                }"DeselectByIndex" {
                     $SelectedElement.DeselectByIndex($Index)
                     break
-                }"DeselectByText"{
+                }"DeselectByText" {
                     $SelectedElement.DeselectByText($Text)
                     break
-                }"DeselectByValue"{
+                }"DeselectByValue" {
                     $SelectedElement.DeslectByValue($Value)
                     break
-                }"SelectByIndex"{
+                }"SelectByIndex" {
                     $SelectedElement.SelectByIndex($Index)
                     break
-                }"SelectByText"{
+                }"SelectByText" {
                     $SelectedElement.SelectByText($Text)
                     break
-                }"SelectByValue"{
+                }"SelectByValue" {
                     $SelectedElement.SelectByValue($Value)
                     break
                 }

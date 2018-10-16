@@ -14,6 +14,9 @@ function Get-DynamicParam {
     Sets the position
     .PARAMETER ValidateSet
     An array of strings to validate the parmameter input
+    .PARAMETER ValidateScript
+    Takes a script block as a param. If needed you can convert a string to a scriptblock pretty easily: 
+        $script = [scriptblock]::Create($string)
     .PARAMETER HelpMessage
     Will be assigned as the Parameters help message
     .PARAMETER SetName
