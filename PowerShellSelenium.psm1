@@ -604,7 +604,7 @@ function Get-SeElementAttribute {
     )
     process {
         Foreach ($Element in $ElementList) {
-            $Element.GetAtribute($value)
+            $Element.GetAttribute($value)
         }
     }
 }
