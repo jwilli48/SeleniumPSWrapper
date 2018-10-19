@@ -1086,6 +1086,9 @@ function Get-SeElementScreenShot {
         $driver_num = 0
         foreach ($ScreenShot in $ScreenShots) {
             if ($SaveBaseImage) {
+                if (-not (Test-Path $DestinationDirectory)) {
+                    New-Item -ItemType Directory -Path $DestinationDirectory    
+                }  
                 $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
             }
             foreach ($Element in $ElementList) {
