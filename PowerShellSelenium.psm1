@@ -275,14 +275,14 @@ function Invoke-SeFindElements {
     [CmdletBinding()]
     [OutputType([OpenQA.Selenium.IWebElement])]
     param(
-        [Parameter(Mandatory = $true, ParameterSetName = "Driver", ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "Driver", ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Element", ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = "Element", ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 1)]
         [ValidateSet("TagName", "ClassName", "ID", "LinkText", "PartialLinkText", "CssSelector", "XPath", "Name")]
         $By,
-        [Parameter(Mandatory = $true, HelpMessage = "Input the selector that will match your choosen search method")]
+        [Parameter(Mandatory = $true, Position = 2, HelpMessage = "Input the selector that will match your choosen search method")]
         $Locator
     )
     process {
@@ -331,7 +331,7 @@ function Invoke-SeWaitUntil {
         -VisibilityOfAllElementsLocatedBy : ([string]BY [string]LOCATOR) -OR ([System.Collections.ObjectModel.ReadOnlyCollection[OpenQA.Selenium.IWebElement]]ELEMENT_LIST)
 
     .PARAMETER WaitTime
-    The time to wait for the condition to be filled before throwing a TimeOut error. Default is 5 seconds.
+    The time to wait for the condition to be filled before throwing a TimeOut error. Default is 5 seconds. As of right now setting this value with a New-TimeSpan it will hide the dynamic params after it for some reason, so it should be set last.
     
     .PARAMETER PollingInterval
     Interval at which the condition will be polled to see if it has been fulfilled. Default is 500ms
@@ -359,7 +359,7 @@ function Invoke-SeWaitUntil {
     )
     DynamicParam {
         $RuntimeParameterDictionary = New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline ))
+        $RuntimeParameterDictionary.Add('DriverList', (Get-DynamicParam -Name "DriverList" -type "OpenQA.Selenium.Remote.RemoteWebDriver[]" -mandatory -FromPipeline))
         
         switch ($Condition) {
             "AlertState" {  
@@ -367,7 +367,7 @@ function Invoke-SeWaitUntil {
                 break
             }"ElementExists" {
                 $RuntimeParameterDictionary.Add("By", (Get-DynamicParam -name "By" -type string -mandatory -ValidateSet "TagName", "ClassName", "ID", "LinkText", "PartialLinkText", "CssSelector", "XPath", "Name" -SetName "By"))
-                $RuntimeParameterDictionary.Add("Locator", (Get-DynamicParam -name "Locator" -type string -mandatory -SetName "By"))
+                $RuntimeParameterDictionary.Add("Locator", (Get-DynamicParam -name "Locator" -type string -mandatory -SetName "By" -Position 2))
                 break
             }"ElementIsVisible" {
                 $RuntimeParameterDictionary.Add("By", (Get-DynamicParam -name "By" -type string -mandatory -ValidateSet "TagName", "ClassName", "ID", "LinkText", "PartialLinkText", "CssSelector", "XPath", "Name" -SetName "By"))
@@ -701,12 +701,13 @@ function Send-SeKeys {
     #>
     [cmdletbinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Driver")]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Driver", Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Element")]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = "Element", Position = 0)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 1)]
         [string[]]$Text,
+        [Parameter(Position = 2)]
         [ValidateSet("Add", "Alt", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowUp", "Backspace", "Cancel", "Clear", "Command", "Control", "Decimal", "Delete", "Divide", "Down", "End", "Enter", "Equal", "Escape", "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12", "Help", "Home", "Insert", "Left", "LeftAlt", "LeftControl", "LeftShift", "Meta", "Multiply", "Null", "NumberPAd0", "NumberPad1", "NumberPad2", "NumberPad3", "NumberPad4", "NumberPad5", "NumberPad6", "NumberPad7", "NumberPad8", "NumberPad9", "PageDown", "PageUp", "Pause", "Return", "Right", "Semicolon", "Separator", "Shift", "Space", "Subtract", "Tab", "Up", "PositionNthTextHere")]
         [string[]]$SpecialKeys
     )
@@ -781,13 +782,13 @@ function Set-SeTabFocus {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Number")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Number", Position = 1)]
         [int]$TabNumber,
-        [Parameter(Mandatory = $true, ParameterSetName = "Handle")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Handle", Position = 1)]
         [string[]]$WindowHandles,
-        [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Regex", Position = 1)]
         [regex]$UrlOrTitle
     )
     process {
@@ -901,13 +902,13 @@ function Close-SeTab {
     #>
     [CmdletBinding(DefaultParameterSetName = "Number")]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Number")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Number", Position = 1)]
         [int]$TabNumber,
-        [Parameter(Mandatory = $true, ParameterSetName = "Regex")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Regex", Position = 1)]
         [regex]$UrlOrTitle,
-        [Parameter(Mandatory = $true, ParameterSetName = "Current")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Current", Position = 1)]
         [switch]$CurrentTab
     )
     process {
@@ -978,14 +979,14 @@ function Get-SeScreenShot {
     #>
     [CmdletBinding(DefaultParameterSetName = "DontSave")]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 1)]
         [ValidateSet("Png", "Jpeg", "Gif", "Tiff", "Bmp")]
         $Format,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 2)]
         $DestinationDirectory,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 3)]
         [ValidateScript( {
                 if ($_ -match ".*?\.[A-Za-z]+") {
                     throw "Do not include a file extension as it will be added from the Format parameter"
@@ -1061,16 +1062,16 @@ function Get-SeElementScreenShot {
     [CmdletBinding(DefaultParameterSetName = "DontSave")]
     [OutputType([System.Drawing.Bitmap])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 1)]
         [OpenQA.Selenium.IWebElement[]]$ElementList,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 2)]
         [ValidateSet("Png", "Jpeg", "Gif", "Tiff", "Bmp")]
         $Format,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 3)]
         [string]$DestinationDirectory,
-        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs")]
+        [Parameter(Mandatory = $true, ParameterSetName = "SaveAs", Position = 4)]
         [ValidateScript( {
                 if ($_ -match ".*?\.[A-Za-z]+") {
                     throw "Do not include a file extension as it will be added from the Format parameter"
@@ -1136,12 +1137,12 @@ function Invoke-SeNavigate {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Navigate")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Navigate", Position = 1)]
         [ValidateSet("Back", "Forward", "Refresh")]
         $Navigate,
-        [Parameter(Mandatory = $true, ParameterSetName = "Url")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Url", Position = 1)]
         [System.Uri]$Url
     )
     process {
@@ -1435,10 +1436,11 @@ function Invoke-SeChromeCommand {
     #>
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, Position = 0)]
         [OpenQA.Selenium.Chrome.ChromeDriver[]]$DriverList,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 1)]
         [string]$commandName,
+        [Parameter(Position = 2)]
         [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters = ([System.Collections.Generic.Dictionary[string, System.Object]]::new())
     )
     Process {
@@ -1569,17 +1571,17 @@ function New-SeCookie {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ParameterSetName = "string")]
+        [Parameter(Mandatory = $true, ParameterSetName = "string", Position = 0)]
         [string]$name,
-        [Parameter(Mandatory = $true, ParameterSetName = "string")]
+        [Parameter(Mandatory = $true, ParameterSetName = "string", Position = 1)]
         [string]$value,
-        [Parameter(ParameterSetName = "string")]
+        [Parameter(ParameterSetName = "string", Position = 2)]
         [string]$domain,
-        [Parameter(ParameterSetName = "string")]
+        [Parameter(ParameterSetName = "string", Position = 3)]
         [string]$path,
-        [Parameter(ParameterSetName = "string")]
+        [Parameter(ParameterSetName = "string", Position = 4)]
         [System.Nullable[datetime]]$expiry,
-        [Parameter(Mandatory = $true, ParameterSetName = "dictionary")]
+        [Parameter(Mandatory = $true, ParameterSetName = "dictionary", Position = 0)]
         [System.Collections.Generic.Dictionary[string, System.Object]]$CookieParams
     )
     process {
@@ -1759,14 +1761,14 @@ function Invoke-SeManageTimeouts {
     #>
     [Cmdletbinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, Position = 0)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList,
-        [Parameter(Mandatory = $true, ParameterSetName = "Set")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Set", Position = 1)]
         [ValidateSet("AsynchronousJavaScript", "ImplicitWait", "PageLoad")]
         [string]$Set,
-        [Parameter(Mandatory = $true, ParameterSetName = "Set")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Set", Position = 2)]
         [timespan]$value,
-        [Parameter(Mandatory = $true, ParameterSetName = "Get")]
+        [Parameter(Mandatory = $true, ParameterSetName = "Get", Position = 1)]
         [ValidateSet("AsynchronousJavaScript", "ImplicitWait", "PageLoad")]
         [string]$Get
     )
