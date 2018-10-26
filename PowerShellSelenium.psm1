@@ -6,9 +6,6 @@ Functions to ease use of Selenium Webdriver inside of Windows PowerShell for Chr
 .NOTE
     Dynamic Params: If you have a custom type as a param, the dynamic params will not show up visually with tab completion / Intellisense after that one has been set in the function.
     FIX: Make the custom object a dynamic param that is always created
-
-    Commands need to be run when using Dynamic Params that allow you to use the direct variable name you want instead of using $PSBoundParameters to find them.
-
 #>
 
 #Load needed modules
@@ -144,7 +141,6 @@ function Get-SeDriverStatus {
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]$DriverList
     )
     process {
-        #Need to make this a foreach loop#
         [PSCustomObject[]]$ReturnList = [System.Collections.ArrayList]::new()
         Foreach ($driver in $DriverList) {
             $ReturnList += [PSCustomObject] @{
@@ -189,7 +185,7 @@ function Invoke-SeJavaScript {
     Invoke-JavaScript -DriverList $d -Script "window.open()"
 
     .NOTES
-    It was complicated to get the arguments to work correctly with powershell. It is suppose to allow you to pass in an array such as $driver.ExecuteScript("return (arguments[0] + arguments[1];", $ArgumentArray) but this kept throwing an error, I believe because it does not recognize the PowerShell format for arrays. It does work if you put each element of the array as parameters. With this I make a string for the command and input all of the arguments into a string (this allows me to put the commas between all of the arguments without knowing how many there are) then I turn the string into a scriptblock and invoke the command.
+    It was complicated to get the arguments to work correctly with powershell. It is suppose to allow you to pass in an array such as $driver.ExecuteScript("return (arguments[0] + arguments[1];", $ArgumentArray) but this kept throwing an error, I believe because it does not recognize the PowerShell arrays. It does work if you put each element of the array as parameters. With this in mind I make a string for the command and input all of the arguments into a string (this allows me to put the commas between all of the arguments without knowing how many there are) then I turn the string into a scriptblock and invoke the command.
     #>
     [CmdletBinding()]
     param(
@@ -731,7 +727,7 @@ function Send-SeKeys {
             $TextStringsUsed = 0;
             foreach ($key in $SpecialKeys) {
                 if ($key -eq "PositionNthTextHere") {
-                    $key = $key -replace $key, $text[$TextStringsUsed]
+                    $key = $text[$TextStringsUsed]
                     $TextStringsUsed++
                     $SendKeys += $key
                 }
@@ -792,7 +788,7 @@ function Set-SeTabFocus {
         [regex]$UrlOrTitle
     )
     process {
-        $i = 0;
+        $h = 0;
         Foreach ($driver in $DriverList) {
             if ($PSCmdlet.ParameterSetName -eq "Number") {
                 if ($TabNumber -gt $driver.WindowHandles.Count) {
@@ -802,7 +798,7 @@ function Set-SeTabFocus {
             }
             elseif ($PSCmdlet -eq "Handle") {
                 try {
-                    $Driver.SwitchTo().Window($WindowHandles[$i])
+                    $Driver.SwitchTo().Window($WindowHandles[$h])
                 }
                 catch {
                     throw "Driver did not contian Window Handle. Make sure the order of the handle array matches the driver array."
@@ -818,7 +814,7 @@ function Set-SeTabFocus {
                     }
                 }
             }
-            $i++
+            $h++
         }
     }
 }
@@ -868,7 +864,8 @@ function Open-SeWindow {
             $CurrentWindow = $driver.CurrentWindowHandle
             Invoke-SeJavaScript -DriverList $Driver -Scripts "window.open($Url, $Name, $Params, $ReplaceCurrentWindow`")"
             if ($DontSwitchTo) {
-                Set-SeTabFocus -DriverList $driver -WindowHandles $CurrentWindow | Out-Null
+                Set-SeTabFocus -DriverList $driver -WindowHandles $CurrentWindow | 
+                    Out-Null
             }
         }
     }
@@ -1605,7 +1602,7 @@ function Invoke-SeManageLogs {
     An example
     
     .NOTES
-    I don't know much about the logs other then by defualt they seem to be off as I never see anything inside of them when calling these options
+    I don't know much about the logs other then by defualt they seem to be off as I never see anything inside of them when calling these options, but this could just be due to my ignorance of in this area
 
     #>
     [CmdletBinding()]
@@ -1802,6 +1799,24 @@ function Invoke-SeManageTimeouts {
 
 
 function Invoke-SeSelectElement {
+    <#
+    .SYNOPSIS
+    This is only used for <select> HTML element tags. Does not work if a drop down menu is made with a <li>/<ul> and JavaScript, it must be a <select> element as far as I understand. It could probably use a better name as this does not select an element but invokes the Selenium class for Select Elements
+    
+    .DESCRIPTION
+    Allows for simple / easier manipulation of a <select> HTML element
+    
+    .PARAMETER Action
+    This will define the action you wish to do and from that action additional parameters may be asked for and required.
+    
+    .EXAMPLE
+    #This example will return a list of all options selected by any select element in the DOM.
+    $elements = Invoke-SeFindElements $DriverList $d -By TagName -Locator select
+    Invoke-SeSelectElement -Action GetAllSelectedOptions -ElementList $elements
+    
+    .NOTES
+    General notes
+    #>
     [cmdletbinding()]
     param(
         [Parameter(Mandatory = $true)]
