@@ -1420,6 +1420,9 @@ function Invoke-SeChromeCommand {
     .PARAMETER commandParameters
     Parameters of command to execute. It will default to an empty array if no params are needed
     
+    .PARAMETER NoResult
+    By default will run the ChromeCommandWithResult method, but if you don't want any output you can set this switch
+    
     .EXAMPLE
     $metrics = [System.Collections.Generic.Dictionary[string, System.Object]]::new()
     $metrics["width"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerWidth,document.body.scrollWidth,document.documentElement.scrollWidth)"
@@ -1438,11 +1441,16 @@ function Invoke-SeChromeCommand {
         [Parameter(Mandatory = $true, Position = 1)]
         [string]$commandName,
         [Parameter(Position = 2)]
-        [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters = ([System.Collections.Generic.Dictionary[string, System.Object]]::new())
+        [System.Collections.Generic.Dictionary[string, System.Object]]$commandParameters = ([System.Collections.Generic.Dictionary[string, System.Object]]::new()),
+        [switch]$NoResult
     )
     Process {
         Foreach ($Driver in $DriverList) {
-            $Driver.ExecuteChromeCommand($commandName, $commandParameters)
+            if($NoResult){
+                $Driver.ExecuteChromeCommand($commandName, $commandParameters)
+            }else{
+                $Driver.ExecuteChromeCommandWithResult($commandName, $commandParameters)
+            }
         }
     }
 }
