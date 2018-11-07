@@ -853,16 +853,16 @@ function Open-SeWindow {
         [Parameter(Mandatory = $true)]
         [OpenQA.Selenium.Remote.RemoteWebDriver[]]
         $DriverList,
-        [System.Uri]$Url,
-        [string]$Name,
-        [string[]]$Params,
+        $Url,
+        $Name,
+        $Params,
         [switch]$DontSwitchTo,
         [switch]$ReplaceCurrentWindow
     )
     process {
         Foreach ($Driver in $DriverList) {
             $CurrentWindow = $driver.CurrentWindowHandle
-            Invoke-SeJavaScript -DriverList $Driver -Scripts "window.open($Url, $Name, $Params, $ReplaceCurrentWindow`")"
+            Invoke-SeJavaScript -DriverList $Driver -Scripts ("window.open('{0}', '{1}', {2}, {3})" -f $Url, $Name, ("'$($params -join "'+'")'"), ($ReplaceCurrentWindow -replace "F", "f" -replace "T", "t"))
             if ($DontSwitchTo) {
                 Set-SeTabFocus -DriverList $driver -WindowHandles $CurrentWindow | 
                     Out-Null
