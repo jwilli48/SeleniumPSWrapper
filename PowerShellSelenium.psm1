@@ -574,6 +574,42 @@ function Invoke-SeWaitUntil {
     }
 }
 
+function Invoke-SeElementMethod {
+    <#
+    .SYNOPSIS
+    To be used for the methods that do not return the object at the end to allow for use in a pipeline
+    
+    .DESCRIPTION
+    
+    
+    .PARAMETER ElementList
+    List of one or more elements
+    
+    .PARAMETER Method
+    The method you wish to run, has tab completion
+    
+    .EXAMPLE
+    Invoke-SeElementMethod -ElementList $e -Method Clear | Send-SeKeys -Text "test"
+    
+    .NOTES
+    General notes
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [OpenQA.Selenium.IWebElement[]]$ElementList,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Clear","Click","Submit")]
+        [string]$Method
+    )
+    process {
+        Foreach ($Element in $ElementList)
+        {
+            $Element.$Method()
+            $Element
+        }
+    }
+}
 function Get-SeElementAttribute {
     <#
     .SYNOPSIS
@@ -1309,7 +1345,7 @@ function Invoke-SeKeyboard {
         }
     }
 }
-function Invoke-SeMouseClick() {
+function Invoke-SeMouseClick {
     <#
     .SYNOPSIS
     Invoke commands normally done with a mouse
