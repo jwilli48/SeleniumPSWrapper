@@ -1039,18 +1039,18 @@ function Get-SeScreenShot {
                 $metrics["height"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return Math.max(window.innerHeight,document.body.scrollHeight,document.documentElement.scrollHeight)"
                 $metrics["deviceScaleFactor"] = [double](Invoke-SeJavaScript -DriverList $driver -Scripts "window.devicePixelRatio")
                 $metrics["mobile"] = Invoke-SeJavaScript -DriverList $driver -Scripts "return typeof window.orientation !== 'undefined'"
-                Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.setDeviceMetricsOverride" -commandParameters $metrics
+                $null = Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.setDeviceMetricsOverride" -commandParameters $metrics
             }
             $ScreenShot = $driver.GetScreenShot()
             if ($PSCmdlet.ParameterSetName -eq "SaveAs") {
                 if (-not (Test-Path $DestinationDirectory)) {
-                    New-Item -ItemType Directory -Path $DestinationDirectory    
+                   $null = New-Item -ItemType Directory -Path $DestinationDirectory    
                 }
                 $ScreenShot.SaveAsFile("$DestinationDirectory\$($FileBaseName)_$image_number.$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
             }
             $image_number++
+            $Null = Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.clearDeviceMetricsOverride"
             $ScreenShot
-            Invoke-SeChromeCommand -DriverList $driver -commandName "Emulation.clearDeviceMetricsOverride"
         }
     }
 }
@@ -1123,7 +1123,7 @@ function Get-SeElementScreenShot {
                 if (-not (Test-Path $DestinationDirectory)) {
                     New-Item -ItemType Directory -Path $DestinationDirectory    
                 }  
-                $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
+                $ScreenShot[1].SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
             }
             foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.Count)))
