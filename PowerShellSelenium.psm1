@@ -1123,7 +1123,7 @@ function Get-SeElementScreenShot {
                 if (-not (Test-Path $DestinationDirectory)) {
                     New-Item -ItemType Directory -Path $DestinationDirectory    
                 }  
-                $ScreenShot[1].SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
+                $ScreenShot.SaveAsFile("$($DestinationDirectory)\$($FileBaseName)_$($driver_num).$Format", [OpenQA.Selenium.ScreenshotImageFormat]::$Format)
             }
             foreach ($Element in $ElementList) {
                 [System.Drawing.Bitmap] $image = New-Object System.Drawing.Bitmap((New-Object System.IO.MemoryStream ($ScreenShot.AsByteArray, $ScreenShot.Count)))
